@@ -6,8 +6,6 @@
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <!-- Add HandTracking.js -->
-    <script src="https://cdn.jsdelivr.net/npm/handtrackjs/dist/handtrack.min.js"></script>
     <style>
         #markerInfo {
             position: fixed;
@@ -21,10 +19,108 @@
             font-family: Arial, sans-serif;
             font-size: 18px;
         }
-        #handCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 999;
-            pointer-events: none;
-        }
+        body { margin: 0; }
+    </style>
+</head>
+<body>
+    <div id="markerInfo">Searching for markers...</div>
+    
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' renderer="antialias: true">
+        <a-assets>
+            <video id="outputVideo" src="ar/output/output.mp4" preload="auto" loop crossorigin playsinline></video>
+        </a-assets>
+
+        <!-- Solar System Marker -->
+        <a-marker type="pattern" url="ar/solar/solar.patt">
+            <a-entity id="solarSystem" position="0 0.1 0" scale="0.05 0.05 0.05">
+                <!-- Sun -->
+                <a-sphere 
+                    position="0 0 0" 
+                    radius="1" 
+                    material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/sun.jpg"
+                    animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
+                </a-sphere>
+                
+                <!-- Earth Orbit -->
+                <a-entity id="earthOrbit">
+                    <!-- Earth -->
+                    <a-sphere 
+                        position="3 0 0" 
+                        radius="0.3"
+                        material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/earth_atmos_2048.jpg"
+                        animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
+                        
+                        <!-- Moon Orbit -->
+                        <a-entity id="moonOrbit">
+                            <!-- Moon -->
+                            <a-sphere 
+                                position="0.5 0 0" 
+                                radius="0.1"
+                                material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/moon_1024.jpg"
+                                animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
+                            </a-sphere>
+                        </a-entity>
+                    </a-sphere>
+                </a-entity>
+            </a-entity>
+        </a-marker>
+
+        <!-- Video Marker -->
+        <a-marker type="pattern" url="ar/output/output.patt">
+            <a-video
+                src="#outputVideo"
+                width="3"
+                height="2"
+                position="0 0.1 0"
+                rotation="-90 0 0"
+                material="shader: flat; side: double">
+            </a-video>
+        </a-marker>
+        
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        window.onload = function() {
+            const video = document.querySelector('#outputVideo');
+            const videoMarker = document.querySelector('a-marker[url*="output"]');
+            const solarMarker = document.querySelector('a-marker[url*="solar"]');
+            const info = document.querySelector('#markerInfo');
+            const earthOrbit = document.querySelector('#earthOrbit');
+            const moonOrbit = document.querySelector('#moonOrbit');
+
+            video.play();
+
+            videoMarker.addEventListener('markerFound', () => {
+                info.textContent = "Video Playing! 🎥";
+                info.style.backgroundColor = "rgba(0, 0, 255, 0.8)";
+                video.play();
+            });
+
+            solarMarker.addEventListener('markerFound', () => {
+                info.textContent = "Solar System Active! 🌎";
+                info.style.backgroundColor = "rgba(0, 255, 0, 0.8)";
+            });
+
+            videoMarker.addEventListener('markerLost', () => {
+                info.textContent = "Searching for markers...";
+                info.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+            });
+
+            solarMarker.addEventListener('markerLost', () => {
+                info.textContent = "Searching for markers...";
+                info.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+            });
+
+            function animate() {
+                if (earthOrbit && moonOrbit) {
+                    earthOrbit.object3D.rotation.y += 0.005;
+                    moonOrbit.object3D.rotation.y += 0.015;
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        };
+    </script>
+</body>
+</html>
