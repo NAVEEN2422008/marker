@@ -1,49 +1,43 @@
 AFRAME.registerComponent('solar-system', {
     schema: {
         timeScale: {type: 'number', default: 1},
-        realScale: {type: 'boolean', default: false}
+        realScale: {type: 'boolean', default: false},
+        smoothTransitions: {type: 'boolean', default: true}
     },
 
     init: function() {
-        // Cache elements
-        this.celestialBodies = {
-            sun: this.el.querySelector('#sun'),
-            earth: this.el.querySelector('#earth'),
-            moon: this.el.querySelector('#moon'),
-            earthOrbit: this.el.querySelector('#earthOrbit'),
-            moonOrbit: this.el.querySelector('#moonOrbit')
+        // Cache references and bind methods
+        this.onMarkerFound = this.onMarkerFound.bind(this);
+        this.onMarkerLost = this.onMarkerLost.bind(this);
+        this.onMarkerStabilized = this.onMarkerStabilized.bind(this);
+        
+        this.state = {
+            isVisible: false,
+            isStable: false,
+            lastUpdate: 0
         };
 
-        // Astronomical constants
-        this.constants = {
-            earthYear: 365.25,
-            earthDay: 24,
-            moonMonth: 27.3,
-            sunRotation: 27,
-            earthTilt: 23.5,
-            moonTilt: 5.14,
-            earthDistance: this.data.realScale ? 149.6 : 15, // AU or display units
-            moonDistance: this.data.realScale ? 0.384 : 3,  // AU or display units
-            scales: {
-                sun: [5, 5, 5],
-                earth: [1, 1, 1],
-                moon: [0.5, 0.5, 0.5]
+        try {
+            this.initializeCelestialBodies();
+            this.setupSystem();
+            this.addEventListeners();
+        } catch (error) {
+            console.error('Solar system initialization failed:', error);
+            this.handleError(error);
+        }
+    },
+
+    initializeCelestialBodies: function() {
+        // Cache elements with error checking
+        const bodies = ['sun', 'earth', 'moon', 'earthOrbit', 'moonOrbit'];
+        this.celestialBodies = {};
+        
+        bodies.forEach(id => {
+            const element = this.el.querySelector(`#${id}`);
+            if (!element) {
+                throw new Error(`Required element #${id} not found`);
             }
-        };
-
-        this.setupSystem();
-
-        this.el.sceneEl.addEventListener('marker-stabilized', () => {
-            // Smooth transitions when marker is stable
-            Object.values(this.celestialBodies).forEach(body => {
-                body.setAttribute('animation__fade', {
-                    property: 'scale',
-                    from: '0 0 0',
-                    to: body.getAttribute('scale'),
-                    dur: 1000,
-                    easing: 'easeOutElastic'
-                });
-            });
+            this.celestialBodies[id] = element;
         });
     },
 
@@ -99,13 +93,16 @@ AFRAME.registerComponent('solar-system', {
         const body = this.celestialBodies[bodyName];
         const duration = this.getRotationDuration(bodyName);
         
-        body.setAttribute('animation__rotate', {
+        // Add smooth easing for transitions
+        const animation = {
             property: 'rotation',
             to: '0 360 0',
             dur: duration,
-            easing: 'linear',
+            easing: this.data.smoothTransitions ? 'easeOutQuad' : 'linear',
             loop: true
-        });
+        };
+
+        body.setAttribute('animation__rotate', animation);
     },
 
     getRotationDuration: function(bodyName) {
@@ -120,15 +117,39 @@ AFRAME.registerComponent('solar-system', {
     setupEventListeners: function() {
         const marker = document.querySelector('a-marker');
         
-        marker.addEventListener('markerFound', () => {
-            this.el.emit('solar-system-visible', {});
-            this.resumeAnimations();
-        });
+        marker.addEventListener('markerFound', this.onMarkerFound);
+        marker.addEventListener('markerLost', this.onMarkerLost);
+        this.el.sceneEl.addEventListener('marker-stabilized', this.onMarkerStabilized);
+    },
 
-        marker.addEventListener('markerLost', () => {
-            this.el.emit('solar-system-hidden', {});
-            this.pauseAnimations();
-        });
+    onMarkerFound: function() {
+        this.state.isVisible = true;
+        this.el.emit('solar-system-visible', {});
+        this.resumeAnimations();
+    },
+
+    onMarkerLost: function() {
+        this.state.isVisible = false;
+        this.el.emit('solar-system-hidden', {});
+        this.pauseAnimations();
+    },
+
+    onMarkerStabilized: function() {
+        if (!this.state.isStable) {
+            this.state.isStable = true;
+            
+            // Smooth scale-up animation
+            Object.values(this.celestialBodies).forEach(body => {
+                const currentScale = body.getAttribute('scale');
+                body.setAttribute('animation__appear', {
+                    property: 'scale',
+                    from: '0 0 0',
+                    to: `${currentScale.x} ${currentScale.y} ${currentScale.z}`,
+                    dur: 1000,
+                    easing: 'easeOutElastic'
+                });
+            });
+        }
     },
 
     resumeAnimations: function() {
@@ -148,26 +169,67 @@ AFRAME.registerComponent('solar-system', {
     },
 
     tick: function(time, deltaTime) {
-        if (!this.celestialBodies.earthOrbit.object3D.visible) return;
+        if (!this.state.isVisible || !this.celestialBodies.earthOrbit.object3D.visible) return;
 
-        const scaledTime = time * this.data.timeScale;
-        
-        // Update orbits
+        // Limit updates to max 60fps
+        if (time - this.state.lastUpdate < 16) return;
+        this.state.lastUpdate = time;
+
+        try {
+            const scaledTime = time * this.data.timeScale;
+            this.updateOrbits(scaledTime);
+        } catch (error) {
+            console.error('Error in tick:', error);
+        }
+    },
+
+    updateOrbits: function(scaledTime) {
+        // Calculate orbital positions
+        const earthRotation = (scaledTime / (this.constants.earthYear * 1000)) * 2 * Math.PI;
+        const moonRotation = (scaledTime / (this.constants.moonMonth * 1000)) * 2 * Math.PI;
+
+        // Apply smooth interpolation
         this.celestialBodies.earthOrbit.object3D.rotation.y = 
-            (scaledTime / (this.constants.earthYear * 1000)) * 2 * Math.PI;
-        
+            THREE.MathUtils.lerp(
+                this.celestialBodies.earthOrbit.object3D.rotation.y,
+                earthRotation,
+                0.1
+            );
+
         this.celestialBodies.moonOrbit.object3D.rotation.y = 
-            (scaledTime / (this.constants.moonMonth * 1000)) * 2 * Math.PI;
+            THREE.MathUtils.lerp(
+                this.celestialBodies.moonOrbit.object3D.rotation.y,
+                moonRotation,
+                0.1
+            );
+    },
+
+    handleError: function(error) {
+        // Emit error event for UI handling
+        this.el.emit('solar-system-error', {
+            message: error.message,
+            details: error
+        });
     },
 
     remove: function() {
-        // Cleanup
+        // Proper cleanup
+        this.removeEventListeners();
         this.pauseAnimations();
+        
         Object.values(this.celestialBodies).forEach(body => {
             if (body.parentNode) {
                 body.parentNode.removeChild(body);
             }
         });
+    },
+
+    removeEventListeners: function() {
+        const marker = document.querySelector('a-marker');
+        
+        marker.removeEventListener('markerFound', this.onMarkerFound);
+        marker.removeEventListener('markerLost', this.onMarkerLost);
+        this.el.sceneEl.removeEventListener('marker-stabilized', this.onMarkerStabilized);
     }
 });
 
