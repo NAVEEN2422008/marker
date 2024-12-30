@@ -58,47 +58,48 @@
         <a-assets timeout="30000">
             <video 
                 id="arVideo" 
-                src="videos/ar-content.mp4" 
+                src="ar/output/output.mp4"
                 preload="auto" 
                 loop 
                 crossorigin="anonymous"
                 playsinline 
                 webkit-playsinline>
             </video>
-            <img id="sunTexture" src="textures/sun.jpg" crossorigin="anonymous">
-            <img id="earthTexture" src="textures/earth.jpg" crossorigin="anonymous">
-            <img id="moonTexture" src="textures/moon.jpg" crossorigin="anonymous">
+            <!-- Online 3D models from Sketchfab -->
+            <a-asset-item id="sunModel" src="https://cdn.sketchfab.com/models/496978e0832040258981a0086f26fb6d/scene.gltf"></a-asset-item>
+            <a-asset-item id="earthModel" src="https://cdn.sketchfab.com/models/7b69ba2ae9b24549ba2252a443b0dbd8/scene.gltf"></a-asset-item>
+            <a-asset-item id="moonModel" src="https://cdn.sketchfab.com/models/8d5b6e6a53f8493ab70bc29efb98d309/scene.gltf"></a-asset-item>
         </a-assets>
 
         <!-- Solar System Marker -->
         <a-marker preset="custom" type="pattern" url="ar/solar/solar.patt">
-            <a-entity id="solarSystem" position="0 0.1 0" scale="0.05 0.05 0.05">
+            <a-entity id="solarSystem" position="0 0.1 0" scale="0.03 0.03 0.03">
                 <!-- Sun -->
-                <a-sphere 
+                <a-entity 
+                    gltf-model="#sunModel"
                     position="0 0 0" 
-                    radius="1" 
-                    material="src: #sunTexture"
+                    scale="0.5 0.5 0.5"
                     animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
-                </a-sphere>
+                </a-entity>
                 
                 <!-- Earth System -->
                 <a-entity id="earthOrbit">
-                    <a-sphere 
-                        position="3 0 0" 
-                        radius="0.3"
-                        material="src: #earthTexture"
+                    <a-entity 
+                        gltf-model="#earthModel"
+                        position="5 0 0" 
+                        scale="0.2 0.2 0.2"
                         animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
                         <!-- Moon System -->
                         <a-entity id="moonOrbit">
-                            <a-sphere 
-                                position="0.5 0 0" 
-                                radius="0.1"
-                                material="src: #moonTexture"
+                            <a-entity 
+                                gltf-model="#moonModel"
+                                position="1 0 0" 
+                                scale="0.08 0.08 0.08"
                                 animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
-                            </a-sphere>
+                            </a-entity>
                         </a-entity>
-                    </a-sphere>
+                    </a-entity>
                 </a-entity>
             </a-entity>
         </a-marker>
@@ -127,7 +128,10 @@
             const solarMarker = document.querySelector('a-marker[url*="solar"]');
             let animationFrameId = null;
             let assetsLoaded = 0;
-            const totalAssets = 4; // video + 3 textures
+            const totalAssets = 4; // video + 3 models
+            let isPlaying = false;
+            let errorCount = 0;
+            const MAX_RETRIES = 3;
 
             function updateLoadingProgress() {
                 assetsLoaded++;
@@ -138,16 +142,52 @@
                 }
             }
 
-            // Asset loading handling
-            ['sunTexture', 'earthTexture', 'moonTexture'].forEach(textureId => {
-                const img = document.querySelector(`#${textureId}`);
-                img.addEventListener('load', updateLoadingProgress);
-                img.addEventListener('error', (error) => {
-                    console.error(`Failed to load texture: ${textureId}`, error);
-                    info.textContent = 'Error loading textures';
+            // Improved asset loading handler
+            function handleAssetError(assetId) {
+                errorCount++;
+                console.error(`Failed to load asset: ${assetId}`);
+                
+                if (errorCount < MAX_RETRIES) {
+                    const asset = document.querySelector(`#${assetId}`);
+                    asset.load(); // Retry loading
+                } else {
+                    info.textContent = 'Error loading assets - Please refresh';
                     info.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+                }
+            }
+
+            // Model loading handling
+            ['sunModel', 'earthModel', 'moonModel'].forEach(modelId => {
+                const model = document.querySelector(`#${modelId}`);
+                model.addEventListener('model-loaded', updateLoadingProgress);
+                model.addEventListener('error', (error) => {
+                    console.error(`Failed to load model: ${modelId}`, error);
+                    handleAssetError(modelId);
                 });
             });
+
+            // Enhanced video handling
+            function setupVideo() {
+                video.addEventListener('loadedmetadata', () => {
+                    updateLoadingProgress();
+                    if (!isPlaying) {
+                        video.play()
+                            .then(() => isPlaying = true)
+                            .catch(error => {
+                                console.warn('Video autoplay failed:', error);
+                                info.textContent = 'Tap to enable video';
+                                
+                                document.addEventListener('click', () => {
+                                    video.play()
+                                        .then(() => isPlaying = true)
+                                        .catch(console.error);
+                                }, { once: true });
+                            });
+                    }
+                });
+
+                video.addEventListener('error', () => handleAssetError('arVideo'));
+            }
 
             // Handle video loading
             video.addEventListener('loadedmetadata', () => {
@@ -163,11 +203,15 @@
                 });
             });
 
-            // Marker detection handlers
+            // Improved marker handlers
             videoMarker.addEventListener('markerFound', () => {
                 info.textContent = '📹 Video Marker Detected';
                 info.style.backgroundColor = 'rgba(0, 100, 255, 0.8)';
-                video.play().catch(console.error);
+                if (!isPlaying) {
+                    video.play()
+                        .then(() => isPlaying = true)
+                        .catch(console.error);
+                }
             });
 
             solarMarker.addEventListener('markerFound', () => {
@@ -182,7 +226,13 @@
                 }
             };
 
-            videoMarker.addEventListener('markerLost', resetInfo);
+            videoMarker.addEventListener('markerLost', () => {
+                if (isPlaying) {
+                    video.pause();
+                    isPlaying = false;
+                }
+                resetInfo();
+            });
             solarMarker.addEventListener('markerLost', resetInfo);
 
             // Orbital animation with visibility check
@@ -200,19 +250,37 @@
             // Start animation
             animate();
 
-            // Cleanup function
+            // Enhanced cleanup
             function cleanup() {
                 if (animationFrameId) {
                     cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
                 }
-                video.pause();
-                video.removeAttribute('src');
-                video.load();
+                
+                if (video) {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load();
+                    isPlaying = false;
+                }
+
+                // Remove event listeners
+                ['sunTexture', 'earthTexture', 'moonTexture'].forEach(textureId => {
+                    const img = document.querySelector(`#${textureId}`);
+                    if (img) {
+                        img.removeEventListener('load', updateLoadingProgress);
+                        img.removeEventListener('error', handleAssetError);
+                    }
+                });
             }
+
+            // Initialize video handling
+            setupVideo();
 
             // Handle errors
             window.addEventListener('error', function(e) {
                 console.error('AR Error:', e);
+                cleanup();
                 info.textContent = 'AR Error - Please refresh';
                 info.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
             });
