@@ -29,15 +29,31 @@
         }
         .hidden { display: none; }
         body { margin: 0; overflow: hidden; }
+        #markerGuide {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            width: 200px;
+            height: 200px;
+            pointer-events: none;
+            display: none;
+        }
+        .marker-found #markerGuide {
+            border-color: #4CAF50;
+        }
     </style>
 </head>
 <body>
     <div id="arInfo" class="ui-element">Initializing AR...</div>
     <div id="loadingProgress" class="ui-element">Loading assets: 0%</div>
+    <div id="markerGuide"></div>
 
     <a-scene 
         embedded 
-        arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'
+        arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960; maxDetectionRate: 60;'
         vr-mode-ui="enabled: false"
         renderer="logarithmicDepthBuffer: true; antialias: true;">
 
@@ -56,7 +72,7 @@
         </a-assets>
 
         <!-- Solar System Marker -->
-        <a-marker preset="custom" type="pattern" url="ar/solar/solar.patt">
+        <a-marker better-marker-detection preset="custom" type="pattern" url="ar/solar/solar.patt">
             <a-entity 
                 id="solarSystem" 
                 position="0 0.5 0" 
@@ -123,7 +139,7 @@
         </a-marker>
 
         <!-- Video Marker -->
-        <a-marker preset="custom" type="pattern" url="ar/output/output.patt">
+        <a-marker better-marker-detection preset="custom" type="pattern" url="ar/output/output.patt">
             <a-video
                 src="#arVideo"
                 width="3"
@@ -147,7 +163,8 @@
                 videoMarker: document.querySelector('a-marker[url*="video"]'),
                 solarMarker: document.querySelector('a-marker[url*="solar"]'),
                 earthOrbit: document.querySelector('#earthOrbit'),
-                moonOrbit: document.querySelector('#moonOrbit')
+                moonOrbit: document.querySelector('#moonOrbit'),
+                markerGuide: document.querySelector('#markerGuide')
             };
 
             // State management
@@ -197,10 +214,14 @@
             // Marker handling
             const markerHandler = {
                 videoFound: () => {
+                    document.body.classList.add('marker-found');
+                    elements.markerGuide.style.display = 'block';
                     updateUI.status('📹 Video Playing', 'rgba(0, 100, 255, 0.8)');
                     if (!state.isPlaying) videoHandler.attemptPlay();
                 },
                 videoLost: () => {
+                    document.body.classList.remove('marker-found');
+                    elements.markerGuide.style.display = 'none';
                     if (state.isPlaying) {
                         elements.video.pause();
                         state.isPlaying = false;
@@ -208,11 +229,18 @@
                     markerHandler.resetInfo();
                 },
                 solarFound: () => {
+                    document.body.classList.add('marker-found');
+                    elements.markerGuide.style.display = 'block';
                     updateUI.status('🌎 Solar System Active', 'rgba(0, 200, 100, 0.8)');
+                },
+                solarLost: () => {
+                    document.body.classList.remove('marker-found');
+                    elements.markerGuide.style.display = 'none';
+                    markerHandler.resetInfo();
                 },
                 resetInfo: () => {
                     if (!elements.videoMarker.object3D.visible && !elements.solarMarker.object3D.visible) {
-                        updateUI.status('Searching for markers...');
+                        updateUI.status('Center marker in view...', 'rgba(255, 165, 0, 0.8)');
                     }
                 }
             };
@@ -246,7 +274,7 @@
                 elements.videoMarker.addEventListener('markerFound', markerHandler.videoFound);
                 elements.videoMarker.addEventListener('markerLost', markerHandler.videoLost);
                 elements.solarMarker.addEventListener('markerFound', markerHandler.solarFound);
-                elements.solarMarker.addEventListener('markerLost', markerHandler.resetInfo);
+                elements.solarMarker.addEventListener('markerLost', markerHandler.solarLost);
                 animate();
                 window.addEventListener('beforeunload', cleanup);
                 window.addEventListener('error', (e) => {

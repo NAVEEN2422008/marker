@@ -158,6 +158,18 @@ AFRAME.registerComponent('solar-system', {
     }
 });
 
+AFRAME.registerComponent('better-marker-detection', {
+    init: function() {
+        this.el.addEventListener('markerFound', () => {
+            this.el.sceneEl.emit('marker-found', {markerId: this.el.id});
+        });
+        
+        this.el.addEventListener('markerLost', () => {
+            this.el.sceneEl.emit('marker-lost', {markerId: this.el.id});
+        });
+    }
+});
+
 window.addEventListener('load', () => {
     const solarSystem = document.querySelector('#solarSystem');
     solarSystem.setAttribute('solar-system', '');
