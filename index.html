@@ -1,63 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AR Solar System & Video Player</title>
+    <title>AR Solar System</title>
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
-        #arInfo {
+        .ui-element {
             position: fixed;
-            top: 20px;
-            left: 20px;
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 12px;
             border-radius: 8px;
-            z-index: 1000;
             font-family: system-ui, -apple-system, sans-serif;
             font-size: 16px;
+            z-index: 1000;
+        }
+        #arInfo {
+            top: 20px;
+            left: 20px;
             pointer-events: none;
         }
-        body { 
-            margin: 0; 
-            overflow: hidden;
-        }
-        .hidden {
-            display: none;
-        }
         #loadingProgress {
-            position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            color: white;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 8px;
-            border-radius: 4px;
         }
+        .hidden { display: none; }
+        body { margin: 0; overflow: hidden; }
     </style>
 </head>
 <body>
-    <div id="arInfo">Initializing AR...</div>
-    <div id="loadingProgress">Loading assets: 0%</div>
-    
+    <div id="arInfo" class="ui-element">Initializing AR...</div>
+    <div id="loadingProgress" class="ui-element">Loading assets: 0%</div>
+
     <a-scene 
         embedded 
-        arjs='sourceType: webcam; 
-              debugUIEnabled: false; 
-              detectionMode: mono_and_matrix; 
-              matrixCodeType: 3x3;
-              sourceWidth: 1280;
-              sourceHeight: 960;
-              displayWidth: 1280;
-              displayHeight: 960;'
+        arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'
         vr-mode-ui="enabled: false"
         renderer="logarithmicDepthBuffer: true; antialias: true;">
-        
+
         <a-assets timeout="30000">
-            <video 
-                id="arVideo" 
+            <video id="arVideo" 
                 src="ar/output/output.mp4"
                 preload="auto" 
                 loop 
@@ -65,43 +49,40 @@
                 playsinline 
                 webkit-playsinline>
             </video>
-            <!-- Using reliable hosted 3D models -->
-            <a-asset-item id="sunModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Duck/glTF-Binary/Duck.glb"></a-asset-item>
-            <a-asset-item id="earthModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Sphere/glTF-Binary/Sphere.glb"></a-asset-item>
-            <a-asset-item id="moonModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Sphere/glTF-Binary/Sphere.glb"></a-asset-item>
         </a-assets>
 
         <!-- Solar System Marker -->
         <a-marker preset="custom" type="pattern" url="ar/solar/solar.patt">
             <a-entity id="solarSystem" position="0 0.1 0" scale="0.03 0.03 0.03">
                 <!-- Sun -->
-                <a-entity 
-                    gltf-model="#sunModel"
+                <a-sphere 
+                    id="sun"
                     position="0 0 0" 
-                    scale="2 2 2"
+                    radius="1"
+                    material="shader: standard; color: #ff9500; emissive: #ff5500; emissiveIntensity: 0.5"
                     animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
-                </a-entity>
+                </a-sphere>
                 
                 <!-- Earth System -->
                 <a-entity id="earthOrbit">
-                    <a-entity 
-                        gltf-model="#earthModel"
+                    <a-sphere 
+                        id="earth"
                         position="5 0 0" 
-                        scale="1 1 1"
-                        material="color: #2233ff"
+                        radius="0.4"
+                        material="shader: standard; color: #2233ff; roughness: 0.7"
                         animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
                         <!-- Moon System -->
                         <a-entity id="moonOrbit">
-                            <a-entity 
-                                gltf-model="#moonModel"
+                            <a-sphere 
+                                id="moon"
                                 position="1.5 0 0" 
-                                scale="0.3 0.3 0.3"
-                                material="color: #999999"
+                                radius="0.1"
+                                material="shader: standard; color: #999999; roughness: 0.5"
                                 animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
-                            </a-entity>
+                            </a-sphere>
                         </a-entity>
-                    </a-entity>
+                    </a-sphere>
                 </a-entity>
             </a-entity>
         </a-marker>
@@ -122,174 +103,127 @@
     </a-scene>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const video = document.querySelector('#arVideo');
-            const info = document.querySelector('#arInfo');
-            const loadingProgress = document.querySelector('#loadingProgress');
-            const videoMarker = document.querySelector('a-marker[url*="video"]');
-            const solarMarker = document.querySelector('a-marker[url*="solar"]');
-            let animationFrameId = null;
-            let assetsLoaded = 0;
-            const totalAssets = 4; // video + 3 models
-            let isPlaying = false;
-            let errorCount = 0;
-            const MAX_RETRIES = 3;
+        (() => {
+            // Cache DOM elements
+            const elements = {
+                video: document.querySelector('#arVideo'),
+                info: document.querySelector('#arInfo'),
+                progress: document.querySelector('#loadingProgress'),
+                videoMarker: document.querySelector('a-marker[url*="video"]'),
+                solarMarker: document.querySelector('a-marker[url*="solar"]'),
+                earthOrbit: document.querySelector('#earthOrbit'),
+                moonOrbit: document.querySelector('#moonOrbit')
+            };
 
-            function updateLoadingProgress() {
-                assetsLoaded++;
-                const progress = Math.round((assetsLoaded / totalAssets) * 100);
-                loadingProgress.textContent = `Loading assets: ${progress}%`;
-                if (assetsLoaded === totalAssets) {
-                    loadingProgress.style.display = 'none';
-                }
-            }
+            // State management
+            const state = {
+                animationFrameId: null,
+                isPlaying: false,
+                assetsLoaded: 0,
+                totalAssets: 1, // just video
+            };
 
-            // Improved asset loading handler
-            function handleAssetError(assetId) {
-                errorCount++;
-                console.error(`Failed to load asset: ${assetId}`);
-                
-                if (errorCount < MAX_RETRIES) {
-                    const asset = document.querySelector(`#${assetId}`);
-                    asset.load(); // Retry loading
-                } else {
-                    info.textContent = 'Error loading assets - Please refresh';
-                    info.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
-                }
-            }
-
-            // Model loading handling
-            ['sunModel', 'earthModel', 'moonModel'].forEach(modelId => {
-                const model = document.querySelector(`#${modelId}`);
-                model.addEventListener('model-loaded', updateLoadingProgress);
-                model.addEventListener('error', (error) => {
-                    console.error(`Failed to load model: ${modelId}`, error);
-                    handleAssetError(modelId);
-                });
-            });
-
-            // Enhanced video handling
-            function setupVideo() {
-                video.addEventListener('loadedmetadata', () => {
-                    updateLoadingProgress();
-                    if (!isPlaying) {
-                        video.play()
-                            .then(() => isPlaying = true)
-                            .catch(error => {
-                                console.warn('Video autoplay failed:', error);
-                                info.textContent = 'Tap to enable video';
-                                
-                                document.addEventListener('click', () => {
-                                    video.play()
-                                        .then(() => isPlaying = true)
-                                        .catch(console.error);
-                                }, { once: true });
-                            });
-                    }
-                });
-
-                video.addEventListener('error', () => handleAssetError('arVideo'));
-            }
-
-            // Handle video loading
-            video.addEventListener('loadedmetadata', () => {
-                updateLoadingProgress();
-                video.play().catch(error => {
-                    console.warn('Video autoplay failed:', error);
-                    info.textContent = 'Tap to enable video';
-                    
-                    // Enable tap-to-play
-                    document.addEventListener('click', () => {
-                        video.play().catch(console.error);
-                    }, { once: true });
-                });
-            });
-
-            // Improved marker handlers
-            videoMarker.addEventListener('markerFound', () => {
-                info.textContent = '📹 Video Marker Detected';
-                info.style.backgroundColor = 'rgba(0, 100, 255, 0.8)';
-                if (!isPlaying) {
-                    video.play()
-                        .then(() => isPlaying = true)
-                        .catch(console.error);
-                }
-            });
-
-            solarMarker.addEventListener('markerFound', () => {
-                info.textContent = '🌎 Solar System Detected';
-                info.style.backgroundColor = 'rgba(0, 200, 100, 0.8)';
-            });
-
-            const resetInfo = () => {
-                if (!videoMarker.object3D.visible && !solarMarker.object3D.visible) {
-                    info.textContent = 'Searching for markers...';
-                    info.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            // Update UI
+            const updateUI = {
+                loading: (progress) => {
+                    elements.progress.textContent = `Loading assets: ${progress}%`;
+                    if (progress >= 100) elements.progress.classList.add('hidden');
+                },
+                status: (text, color = 'rgba(0, 0, 0, 0.8)') => {
+                    elements.info.textContent = text;
+                    elements.info.style.backgroundColor = color;
                 }
             };
 
-            videoMarker.addEventListener('markerLost', () => {
-                if (isPlaying) {
-                    video.pause();
-                    isPlaying = false;
+            // Video handling
+            const videoHandler = {
+                setup: () => {
+                    elements.video.addEventListener('loadedmetadata', () => {
+                        state.assetsLoaded++;
+                        updateUI.loading(100 * (state.assetsLoaded / state.totalAssets));
+                        videoHandler.attemptPlay();
+                    });
+
+                    elements.video.addEventListener('error', () => {
+                        updateUI.status('Video loading failed - Please refresh', 'rgba(255, 0, 0, 0.8)');
+                    });
+                },
+                attemptPlay: () => {
+                    elements.video.play()
+                        .then(() => state.isPlaying = true)
+                        .catch(error => {
+                            console.warn('Video autoplay failed:', error);
+                            updateUI.status('Tap to enable video');
+                            document.addEventListener('click', videoHandler.attemptPlay, { once: true });
+                        });
                 }
-                resetInfo();
-            });
-            solarMarker.addEventListener('markerLost', resetInfo);
+            };
 
-            // Orbital animation with visibility check
-            const earthOrbit = document.querySelector('#earthOrbit');
-            const moonOrbit = document.querySelector('#moonOrbit');
-
-            function animate() {
-                if (solarMarker.object3D.visible && earthOrbit.object3D && moonOrbit.object3D) {
-                    earthOrbit.object3D.rotation.y += 0.005;
-                    moonOrbit.object3D.rotation.y += 0.015;
-                }
-                animationFrameId = requestAnimationFrame(animate);
-            }
-
-            // Start animation
-            animate();
-
-            // Enhanced cleanup
-            function cleanup() {
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                    animationFrameId = null;
-                }
-                
-                if (video) {
-                    video.pause();
-                    video.removeAttribute('src');
-                    video.load();
-                    isPlaying = false;
-                }
-
-                // Remove event listeners
-                ['sunTexture', 'earthTexture', 'moonTexture'].forEach(textureId => {
-                    const img = document.querySelector(`#${textureId}`);
-                    if (img) {
-                        img.removeEventListener('load', updateLoadingProgress);
-                        img.removeEventListener('error', handleAssetError);
+            // Marker handling
+            const markerHandler = {
+                videoFound: () => {
+                    updateUI.status('📹 Video Playing', 'rgba(0, 100, 255, 0.8)');
+                    if (!state.isPlaying) videoHandler.attemptPlay();
+                },
+                videoLost: () => {
+                    if (state.isPlaying) {
+                        elements.video.pause();
+                        state.isPlaying = false;
                     }
+                    markerHandler.resetInfo();
+                },
+                solarFound: () => {
+                    updateUI.status('🌎 Solar System Active', 'rgba(0, 200, 100, 0.8)');
+                },
+                resetInfo: () => {
+                    if (!elements.videoMarker.object3D.visible && !elements.solarMarker.object3D.visible) {
+                        updateUI.status('Searching for markers...');
+                    }
+                }
+            };
+
+            // Animation
+            const animate = () => {
+                if (elements.solarMarker.object3D.visible) {
+                    elements.earthOrbit.object3D.rotation.y += 0.005;
+                    elements.moonOrbit.object3D.rotation.y += 0.015;
+                }
+                state.animationFrameId = requestAnimationFrame(animate);
+            };
+
+            // Cleanup
+            const cleanup = () => {
+                if (state.animationFrameId) {
+                    cancelAnimationFrame(state.animationFrameId);
+                    state.animationFrameId = null;
+                }
+                if (elements.video) {
+                    elements.video.pause();
+                    elements.video.removeAttribute('src');
+                    elements.video.load();
+                    state.isPlaying = false;
+                }
+            };
+
+            // Initialize
+            const init = () => {
+                videoHandler.setup();
+                elements.videoMarker.addEventListener('markerFound', markerHandler.videoFound);
+                elements.videoMarker.addEventListener('markerLost', markerHandler.videoLost);
+                elements.solarMarker.addEventListener('markerFound', markerHandler.solarFound);
+                elements.solarMarker.addEventListener('markerLost', markerHandler.resetInfo);
+                animate();
+                window.addEventListener('beforeunload', cleanup);
+                window.addEventListener('error', (e) => {
+                    console.error('AR Error:', e);
+                    cleanup();
+                    updateUI.status('AR Error - Please refresh', 'rgba(255, 0, 0, 0.8)');
                 });
-            }
+            };
 
-            // Initialize video handling
-            setupVideo();
-
-            // Handle errors
-            window.addEventListener('error', function(e) {
-                console.error('AR Error:', e);
-                cleanup();
-                info.textContent = 'AR Error - Please refresh';
-                info.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
-            });
-
-            // Cleanup on page unload
-            window.addEventListener('beforeunload', cleanup);
-        });
+            // Start when DOM is ready
+            document.addEventListener('DOMContentLoaded', init);
+        })();
     </script>
 </body>
 </html>
