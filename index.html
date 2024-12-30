@@ -21,37 +21,40 @@
     </style>
 </head>
 <body>
-    <div id="markerInfo">Looking for Solar System....</div>
+    <div id="markerInfo">Looking for Solar System...</div>
     
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false; patternRatio: 0.5;'>
         <a-marker type="pattern" url="ar/solar/solar.patt">
-            <a-entity id="solarSystem" position="0 0 0">
+            <a-entity id="solarSystem" position="0 2.5 0" scale="2.5 2.5 2.5">
                 <!-- Sun -->
-                <a-sphere 
-                    position="0 0 0" 
-                    radius="0.5" 
-                    material="shader: standard; color: yellow; emissive: yellow; emissiveIntensity: 1"
+                <a-entity 
+                    id="sun"
+                    gltf-model="#sun-model"
+                    position="0 0 0"
+                    scale="1.5 1.5 1.5"
                     animation="property: rotation; to: 0 360 0; dur: 20000; easing: linear; loop: true">
-                </a-sphere>
+                </a-entity>
                 
                 <!-- Earth Orbit -->
                 <a-entity id="earthOrbit">
-                    <a-sphere 
-                        position="2 0 0" 
-                        radius="0.2" 
-                        material="shader: standard; color: #2233ff; roughness: 0.8"
+                    <a-entity 
+                        id="earth"
+                        gltf-model="#earth-model"
+                        position="7.5 0 0"
+                        scale="1 1 1"
                         animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
                         <!-- Moon Orbit -->
                         <a-entity id="moonOrbit">
-                            <a-sphere 
-                                position="0.5 0 0" 
-                                radius="0.05" 
-                                material="shader: standard; color: #999999; roughness: 0.8"
+                            <a-entity 
+                                id="moon"
+                                gltf-model="#moon-model"
+                                position="2.5 0 0"
+                                scale="0.5 0.5 0.5"
                                 animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
-                            </a-sphere>
+                            </a-entity>
                         </a-entity>
-                    </a-sphere>
+                    </a-entity>
                 </a-entity>
             </a-entity>
         </a-marker>
