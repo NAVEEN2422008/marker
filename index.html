@@ -65,10 +65,10 @@
                 playsinline 
                 webkit-playsinline>
             </video>
-            <!-- Online 3D models from Sketchfab -->
-            <a-asset-item id="sunModel" src="https://cdn.sketchfab.com/models/496978e0832040258981a0086f26fb6d/scene.gltf"></a-asset-item>
-            <a-asset-item id="earthModel" src="https://cdn.sketchfab.com/models/7b69ba2ae9b24549ba2252a443b0dbd8/scene.gltf"></a-asset-item>
-            <a-asset-item id="moonModel" src="https://cdn.sketchfab.com/models/8d5b6e6a53f8493ab70bc29efb98d309/scene.gltf"></a-asset-item>
+            <!-- Using reliable hosted 3D models -->
+            <a-asset-item id="sunModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Duck/glTF-Binary/Duck.glb"></a-asset-item>
+            <a-asset-item id="earthModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Sphere/glTF-Binary/Sphere.glb"></a-asset-item>
+            <a-asset-item id="moonModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Sphere/glTF-Binary/Sphere.glb"></a-asset-item>
         </a-assets>
 
         <!-- Solar System Marker -->
@@ -78,7 +78,7 @@
                 <a-entity 
                     gltf-model="#sunModel"
                     position="0 0 0" 
-                    scale="0.5 0.5 0.5"
+                    scale="2 2 2"
                     animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
                 </a-entity>
                 
@@ -87,15 +87,17 @@
                     <a-entity 
                         gltf-model="#earthModel"
                         position="5 0 0" 
-                        scale="0.2 0.2 0.2"
+                        scale="1 1 1"
+                        material="color: #2233ff"
                         animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
                         <!-- Moon System -->
                         <a-entity id="moonOrbit">
                             <a-entity 
                                 gltf-model="#moonModel"
-                                position="1 0 0" 
-                                scale="0.08 0.08 0.08"
+                                position="1.5 0 0" 
+                                scale="0.3 0.3 0.3"
+                                material="color: #999999"
                                 animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
                             </a-entity>
                         </a-entity>
