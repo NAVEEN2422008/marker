@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Realistic AR Solar System</title>
+    <title>AR Solar System</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <style>
         #markerInfo {
             position: fixed;
@@ -23,26 +24,24 @@
 <body>
     <div id="markerInfo">Searching for marker...</div>
     
-    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;'>
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' renderer="antialias: true">
         <a-assets>
-            <!-- NASA 3D Models -->
-            <a-asset-item id="sun-model" src="ar/sun/scene.gltf"></a-asset-item>
-            <a-asset-item id="earth-model" src="ar/earth/scene.gltf"></a-asset-item>
-            <a-asset-item id="moon-model" src="ar/moon/scene.gltf"></a-asset-item>
+            <a-asset-item id="sun-model" src="https://cdn.aframe.io/examples/sun/scene.gltf"></a-asset-item>
+            <a-asset-item id="earth-model" src="https://cdn.aframe.io/examples/earth/scene.gltf"></a-asset-item>
+            <a-asset-item id="moon-model" src="https://cdn.aframe.io/examples/moon/scene.gltf"></a-asset-item>
         </a-assets>
 
-        <a-marker id="solarMarker" type="pattern" url="ar/solar/solar.patt" emitevents="true">
+        <a-marker preset="hiro">
             <a-entity id="solarSystem" scale="0.5 0.5 0.5">
-                <!-- Sun with glow effect -->
+                <!-- Sun -->
                 <a-entity 
                     gltf-model="#sun-model"
                     position="0 0 0"
                     scale="0.5 0.5 0.5"
-                    light="type: point; intensity: 2; distance: 10; decay: 2"
                     animation="property: rotation; to: 0 360 0; dur: 20000; easing: linear; loop: true">
                 </a-entity>
                 
-                <!-- Earth with atmosphere -->
+                <!-- Earth Orbit -->
                 <a-entity id="earthOrbit">
                     <a-entity 
                         id="earth"
@@ -51,7 +50,7 @@
                         scale="0.2 0.2 0.2"
                         animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
-                        <!-- Moon with crater details -->
+                        <!-- Moon Orbit -->
                         <a-entity id="moonOrbit">
                             <a-entity 
                                 id="moon"
@@ -70,27 +69,35 @@
     </a-scene>
 
     <script>
+        AFRAME.registerComponent('model-loaded', {
+            init: function() {
+                this.el.addEventListener('model-loaded', () => {
+                    console.log('Model loaded successfully!');
+                });
+            }
+        });
+
         window.onload = function() {
-            const marker = document.querySelector('#solarMarker');
+            const marker = document.querySelector('a-marker');
             const info = document.querySelector('#markerInfo');
             const earthOrbit = document.querySelector('#earthOrbit');
             const moonOrbit = document.querySelector('#moonOrbit');
 
-            // Marker detection events
             marker.addEventListener('markerFound', () => {
                 info.textContent = "Solar System Active! 🌎";
                 info.style.backgroundColor = "rgba(0, 255, 0, 0.8)";
             });
 
             marker.addEventListener('markerLost', () => {
-                info.textContent = "Searching for Solar System...";
+                info.textContent = "Searching for marker...";
                 info.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
             });
 
-            // Orbital animation
             function animate() {
-                earthOrbit.object3D.rotation.y += 0.005;
-                moonOrbit.object3D.rotation.y += 0.015;
+                if (earthOrbit && moonOrbit) {
+                    earthOrbit.object3D.rotation.y += 0.005;
+                    moonOrbit.object3D.rotation.y += 0.015;
+                }
                 requestAnimationFrame(animate);
             }
             animate();
