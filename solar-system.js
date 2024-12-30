@@ -1,65 +1,160 @@
 AFRAME.registerComponent('solar-system', {
     schema: {
-        timeScale: {type: 'number', default: 1}
+        timeScale: {type: 'number', default: 1},
+        realScale: {type: 'boolean', default: false}
     },
 
     init: function() {
-        this.sun = this.el.querySelector('#sun');
-        this.earth = this.el.querySelector('#earth');
-        this.moon = this.el.querySelector('#moon');
-        this.earthOrbit = this.el.querySelector('#earthOrbit');
-        this.moonOrbit = this.el.querySelector('#moonOrbit');
-        
-        // Real astronomical values (scaled)
-        this.earthYear = 365.25; // days
-        this.earthDay = 24; // hours
-        this.moonMonth = 27.3; // days
-        this.sunRotation = 27; // days
-        
+        // Cache elements
+        this.celestialBodies = {
+            sun: this.el.querySelector('#sun'),
+            earth: this.el.querySelector('#earth'),
+            moon: this.el.querySelector('#moon'),
+            earthOrbit: this.el.querySelector('#earthOrbit'),
+            moonOrbit: this.el.querySelector('#moonOrbit')
+        };
+
+        // Astronomical constants
+        this.constants = {
+            earthYear: 365.25,
+            earthDay: 24,
+            moonMonth: 27.3,
+            sunRotation: 27,
+            earthTilt: 23.5,
+            moonTilt: 5.14,
+            earthDistance: this.data.realScale ? 149.6 : 15, // AU or display units
+            moonDistance: this.data.realScale ? 0.384 : 3,  // AU or display units
+            scales: {
+                sun: [5, 5, 5],
+                earth: [1, 1, 1],
+                moon: [0.5, 0.5, 0.5]
+            }
+        };
+
+        this.setupSystem();
+    },
+
+    setupSystem: function() {
+        this.setupBodies();
         this.setupOrbits();
         this.setupLighting();
-        
-        // Add marker detection
-        const marker = document.querySelector('a-marker');
-        const markerInfo = document.querySelector('#markerInfo');
-        
-        marker.addEventListener('markerFound', () => {
-            markerInfo.textContent = 'Solar System Marker Detected! 🌟';
-            console.log('Marker found');
+        this.setupAnimations();
+        this.setupEventListeners();
+    },
+
+    setupBodies: function() {
+        // Set scales and positions
+        Object.entries(this.celestialBodies).forEach(([body, element]) => {
+            if (this.constants.scales[body]) {
+                element.object3D.scale.set(...this.constants.scales[body]);
+            }
         });
+
+        // Set Earth position
+        this.celestialBodies.earth.object3D.position.set(this.constants.earthDistance, 0, 0);
         
-        marker.addEventListener('markerLost', () => {
-            markerInfo.textContent = 'Looking for marker...';
-            console.log('Marker lost');
-        });
+        // Set Moon position
+        this.celestialBodies.moon.object3D.position.set(this.constants.moonDistance, 0, 0);
     },
 
     setupOrbits: function() {
-        // Earth orbit
-        this.earthOrbit.object3D.rotation.x = THREE.MathUtils.degToRad(23.5); // Earth's tilt
-        
-        // Moon orbit
-        this.moonOrbit.object3D.rotation.x = THREE.MathUtils.degToRad(5.14); // Moon's orbital tilt
+        // Set orbital tilts
+        this.celestialBodies.earthOrbit.object3D.rotation.x = THREE.MathUtils.degToRad(this.constants.earthTilt);
+        this.celestialBodies.moonOrbit.object3D.rotation.x = THREE.MathUtils.degToRad(this.constants.moonTilt);
     },
 
     setupLighting: function() {
-        // Sun's light
+        // Sun lighting
         const sunLight = new THREE.PointLight(0xFDB813, 2, 100);
-        this.sun.object3D.add(sunLight);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        
+        this.celestialBodies.sun.object3D.add(sunLight);
+        this.el.sceneEl.object3D.add(ambientLight);
+    },
+
+    setupAnimations: function() {
+        // Add animation components
+        const bodies = ['sun', 'earth', 'moon'];
+        bodies.forEach(body => {
+            if (this.celestialBodies[body]) {
+                this.setupBodyAnimation(body);
+            }
+        });
+    },
+
+    setupBodyAnimation: function(bodyName) {
+        const body = this.celestialBodies[bodyName];
+        const duration = this.getRotationDuration(bodyName);
+        
+        body.setAttribute('animation__rotate', {
+            property: 'rotation',
+            to: '0 360 0',
+            dur: duration,
+            easing: 'linear',
+            loop: true
+        });
+    },
+
+    getRotationDuration: function(bodyName) {
+        const durations = {
+            sun: this.constants.sunRotation * 1000,
+            earth: this.constants.earthDay * 1000,
+            moon: this.constants.moonMonth * 1000
+        };
+        return durations[bodyName] || 24000;
+    },
+
+    setupEventListeners: function() {
+        const marker = document.querySelector('a-marker');
+        
+        marker.addEventListener('markerFound', () => {
+            this.el.emit('solar-system-visible', {});
+            this.resumeAnimations();
+        });
+
+        marker.addEventListener('markerLost', () => {
+            this.el.emit('solar-system-hidden', {});
+            this.pauseAnimations();
+        });
+    },
+
+    resumeAnimations: function() {
+        Object.values(this.celestialBodies).forEach(body => {
+            if (body.getAttribute('animation__rotate')) {
+                body.components.animation__rotate.play();
+            }
+        });
+    },
+
+    pauseAnimations: function() {
+        Object.values(this.celestialBodies).forEach(body => {
+            if (body.getAttribute('animation__rotate')) {
+                body.components.animation__rotate.pause();
+            }
+        });
     },
 
     tick: function(time, deltaTime) {
+        if (!this.celestialBodies.earthOrbit.object3D.visible) return;
+
         const scaledTime = time * this.data.timeScale;
         
-        // Earth rotation and orbit
-        this.earthOrbit.object3D.rotation.y = (scaledTime / (this.earthYear * 1000)) * 2 * Math.PI;
-        this.earth.object3D.rotation.y = (scaledTime / (this.earthDay * 1000)) * 2 * Math.PI;
+        // Update orbits
+        this.celestialBodies.earthOrbit.object3D.rotation.y = 
+            (scaledTime / (this.constants.earthYear * 1000)) * 2 * Math.PI;
         
-        // Moon orbit
-        this.moonOrbit.object3D.rotation.y = (scaledTime / (this.moonMonth * 1000)) * 2 * Math.PI;
-        
-        // Sun rotation
-        this.sun.object3D.rotation.y = (scaledTime / (this.sunRotation * 1000)) * 2 * Math.PI;
+        this.celestialBodies.moonOrbit.object3D.rotation.y = 
+            (scaledTime / (this.constants.moonMonth * 1000)) * 2 * Math.PI;
+    },
+
+    remove: function() {
+        // Cleanup
+        this.pauseAnimations();
+        Object.values(this.celestialBodies).forEach(body => {
+            if (body.parentNode) {
+                body.parentNode.removeChild(body);
+            }
+        });
     }
 });
 
