@@ -153,8 +153,8 @@
                         .then(() => state.isPlaying = true)
                         .catch(error => {
                             console.warn('Video autoplay failed:', error);
-                            updateUI.status('Tap to enable video');
-                            document.addEventListener('click', videoHandler.attemptPlay, { once: true });
+                            // Auto-retry after 1 second
+                            setTimeout(() => videoHandler.attemptPlay(), 1000);
                         });
                 }
             };
