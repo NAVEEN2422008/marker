@@ -26,10 +26,21 @@
         .hidden {
             display: none;
         }
+        #loadingProgress {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <div id="arInfo">Initializing AR...</div>
+    <div id="loadingProgress">Loading assets: 0%</div>
     
     <a-scene 
         embedded 
@@ -44,7 +55,7 @@
         vr-mode-ui="enabled: false"
         renderer="logarithmicDepthBuffer: true; antialias: true;">
         
-        <a-assets>
+        <a-assets timeout="30000">
             <video 
                 id="arVideo" 
                 src="videos/ar-content.mp4" 
@@ -111,11 +122,36 @@
         document.addEventListener('DOMContentLoaded', function() {
             const video = document.querySelector('#arVideo');
             const info = document.querySelector('#arInfo');
+            const loadingProgress = document.querySelector('#loadingProgress');
             const videoMarker = document.querySelector('a-marker[url*="video"]');
             const solarMarker = document.querySelector('a-marker[url*="solar"]');
-            
+            let animationFrameId = null;
+            let assetsLoaded = 0;
+            const totalAssets = 4; // video + 3 textures
+
+            function updateLoadingProgress() {
+                assetsLoaded++;
+                const progress = Math.round((assetsLoaded / totalAssets) * 100);
+                loadingProgress.textContent = `Loading assets: ${progress}%`;
+                if (assetsLoaded === totalAssets) {
+                    loadingProgress.style.display = 'none';
+                }
+            }
+
+            // Asset loading handling
+            ['sunTexture', 'earthTexture', 'moonTexture'].forEach(textureId => {
+                const img = document.querySelector(`#${textureId}`);
+                img.addEventListener('load', updateLoadingProgress);
+                img.addEventListener('error', (error) => {
+                    console.error(`Failed to load texture: ${textureId}`, error);
+                    info.textContent = 'Error loading textures';
+                    info.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+                });
+            });
+
             // Handle video loading
             video.addEventListener('loadedmetadata', () => {
+                updateLoadingProgress();
                 video.play().catch(error => {
                     console.warn('Video autoplay failed:', error);
                     info.textContent = 'Tap to enable video';
@@ -149,18 +185,30 @@
             videoMarker.addEventListener('markerLost', resetInfo);
             solarMarker.addEventListener('markerLost', resetInfo);
 
-            // Orbital animation
+            // Orbital animation with visibility check
             const earthOrbit = document.querySelector('#earthOrbit');
             const moonOrbit = document.querySelector('#moonOrbit');
 
             function animate() {
-                if (earthOrbit.object3D && moonOrbit.object3D) {
+                if (solarMarker.object3D.visible && earthOrbit.object3D && moonOrbit.object3D) {
                     earthOrbit.object3D.rotation.y += 0.005;
                     moonOrbit.object3D.rotation.y += 0.015;
                 }
-                requestAnimationFrame(animate);
+                animationFrameId = requestAnimationFrame(animate);
             }
+
+            // Start animation
             animate();
+
+            // Cleanup function
+            function cleanup() {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+            }
 
             // Handle errors
             window.addEventListener('error', function(e) {
@@ -168,6 +216,9 @@
                 info.textContent = 'AR Error - Please refresh';
                 info.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
             });
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', cleanup);
         });
     </script>
 </body>
