@@ -24,8 +24,7 @@
 </head>
 <body>
     <div id="markerInfo">Searching for markers...</div>
-    
-    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' renderer="antialias: true">
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/camera_para.dat'>
         <a-assets>
             <video id="outputVideo" src="ar/output/output.mp4" preload="auto" loop crossorigin playsinline></video>
         </a-assets>
@@ -77,7 +76,8 @@
             </a-video>
         </a-marker>
         
-        <a-entity camera></a-entity>
+        <a-entity camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse" raycaster="far: 10000; objects: .clickable"></a-entity>
+
     </a-scene>
 
     <script>
