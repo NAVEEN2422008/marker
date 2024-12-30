@@ -32,6 +32,19 @@ AFRAME.registerComponent('solar-system', {
         };
 
         this.setupSystem();
+
+        this.el.sceneEl.addEventListener('marker-stabilized', () => {
+            // Smooth transitions when marker is stable
+            Object.values(this.celestialBodies).forEach(body => {
+                body.setAttribute('animation__fade', {
+                    property: 'scale',
+                    from: '0 0 0',
+                    to: body.getAttribute('scale'),
+                    dur: 1000,
+                    easing: 'easeOutElastic'
+                });
+            });
+        });
     },
 
     setupSystem: function() {

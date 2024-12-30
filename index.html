@@ -44,6 +44,10 @@
         .marker-found #markerGuide {
             border-color: #4CAF50;
         }
+        .marker-stable #markerGuide {
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -72,7 +76,18 @@
         </a-assets>
 
         <!-- Solar System Marker -->
-        <a-marker better-marker-detection preset="custom" type="pattern" url="ar/solar/solar.patt">
+        <a-marker 
+            id="solarMarker"
+            preset="custom" 
+            type="pattern" 
+            url="ar/solar/solar.patt"
+            smooth="true"
+            smoothCount="10"
+            smoothTolerance="0.01"
+            smoothThreshold="5"
+            raycaster="objects: .clickable"
+            emitevents="true"
+            cursor="fuse: false; rayOrigin: mouse;">
             <a-entity 
                 id="solarSystem" 
                 position="0 0.5 0" 
@@ -242,6 +257,10 @@
                     if (!elements.videoMarker.object3D.visible && !elements.solarMarker.object3D.visible) {
                         updateUI.status('Center marker in view...', 'rgba(255, 165, 0, 0.8)');
                     }
+                },
+                stabilized: () => {
+                    document.body.classList.add('marker-stable');
+                    updateUI.status('Marker Stabilized', 'rgba(0, 255, 0, 0.8)');
                 }
             };
 
@@ -275,6 +294,7 @@
                 elements.videoMarker.addEventListener('markerLost', markerHandler.videoLost);
                 elements.solarMarker.addEventListener('markerFound', markerHandler.solarFound);
                 elements.solarMarker.addEventListener('markerLost', markerHandler.solarLost);
+                elements.solarMarker.addEventListener('marker-stabilized', markerHandler.stabilized);
                 animate();
                 window.addEventListener('beforeunload', cleanup);
                 window.addEventListener('error', (e) => {
@@ -287,6 +307,46 @@
             // Start when DOM is ready
             document.addEventListener('DOMContentLoaded', init);
         })();
+    </script>
+
+    <script>
+        AFRAME.registerComponent('better-marker-detection', {
+            init: function() {
+                this.el.addEventListener('markerFound', () => {
+                    this.el.setAttribute('visible', 'true');
+                    this.el.emit('marker-detected');
+                });
+
+                this.el.addEventListener('markerLost', () => {
+                    this.el.setAttribute('visible', 'false');
+                    this.el.emit('marker-lost');
+                });
+
+                // Add stability check
+                let lastVisible = false;
+                let visibilityCount = 0;
+                
+                this.el.sceneEl.addEventListener('renderstart', () => {
+                    this.tick = AFRAME.utils.throttleTick(() => {
+                        const visible = this.el.object3D.visible;
+                        
+                        if (visible === lastVisible) {
+                            visibilityCount++;
+                        } else {
+                            visibilityCount = 0;
+                        }
+
+                        if (visibilityCount > 5) {
+                            if (visible) {
+                                this.el.emit('marker-stabilized');
+                            }
+                        }
+
+                        lastVisible = visible;
+                    }, 16.67);  // 60fps
+                });
+            }
+        });
     </script>
 </body>
 </html>
