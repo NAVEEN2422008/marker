@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>AR Solar System & Video</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
@@ -17,24 +18,43 @@
             font-family: Arial, sans-serif;
             font-size: 18px;
         }
-        body { margin: 0; }
+        body { 
+            margin: 0;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
     <div id="markerInfo">Searching for markers...</div>
     
-    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;'>
+    <video 
+        id="arVideo" 
+        autoplay 
+        muted 
+        playsinline 
+        style="display: none">
+    </video>
+
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'>
         <a-assets>
-            <video id="outputVideo" src="ar/output/output.mp4" preload="auto" response-type="arraybuffer" crossorigin webkit-playsinline playsinline></video>
+            <video 
+                id="outputVideo" 
+                src="ar/output/output.mp4" 
+                preload="auto" 
+                autoplay 
+                muted 
+                playsinline 
+                loop>
+            </video>
         </a-assets>
 
         <!-- Solar System Marker -->
-        <a-marker type="pattern" url="ar/solar/solar.patt">
-            <a-entity id="solarSystem" position="0 2.5 0" scale="2.5 2.5 2.5">
+        <a-marker type="pattern" url="ar/solar/solar.patt" smooth="true" smoothCount="5">
+            <a-entity id="solarSystem" position="0 0.5 0" scale="0.5 0.5 0.5">
                 <!-- Sun -->
                 <a-sphere 
                     position="0 0 0"
-                    radius="1.5"
+                    radius="0.5"
                     material="shader: standard; color: yellow; emissive: yellow; emissiveIntensity: 1"
                     animation="property: rotation; to: 0 360 0; dur: 20000; easing: linear; loop: true">
                 </a-sphere>
@@ -42,16 +62,16 @@
                 <!-- Earth Orbit -->
                 <a-entity id="earthOrbit">
                     <a-sphere 
-                        position="7.5 0 0"
-                        radius="1"
+                        position="2 0 0"
+                        radius="0.3"
                         material="shader: standard; color: #2233ff; roughness: 0.8"
                         animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
                         <!-- Moon Orbit -->
                         <a-entity id="moonOrbit">
                             <a-sphere 
-                                position="2.5 0 0"
-                                radius="0.5"
+                                position="0.8 0 0"
+                                radius="0.1"
                                 material="shader: standard; color: #999999; roughness: 0.8"
                                 animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
                             </a-sphere>
@@ -62,14 +82,16 @@
         </a-marker>
 
         <!-- Video Marker -->
-        <a-marker type="pattern" url="ar/output/output.patt">
+        <a-marker type="pattern" url="ar/output/output.patt" smooth="true" smoothCount="5">
             <a-video
+                id="videoEntity"
                 src="#outputVideo"
-                scale="4 2.25 1"
+                width="3"
+                height="2"
                 position="0 0.1 0"
                 rotation="-90 0 0"
                 material="shader: flat; side: double"
-                play="true">
+                play-on-click>
             </a-video>
         </a-marker>
         
@@ -77,18 +99,33 @@
     </a-scene>
 
     <script>
+        AFRAME.registerComponent('play-on-click', {
+            init: function () {
+                this.onClick = this.onClick.bind(this);
+            },
+            play: function () {
+                window.addEventListener('click', this.onClick);
+            },
+            pause: function () {
+                window.removeEventListener('click', this.onClick);
+            },
+            onClick: function () {
+                const videoEl = this.el.getAttribute('material').src;
+                if (!videoEl) { return; }
+                videoEl.play();
+            }
+        });
+
         window.onload = function() {
-            const solarMarker = document.querySelector('a-marker[url*="solar"]');
+            const video = document.querySelector('#outputVideo');
             const videoMarker = document.querySelector('a-marker[url*="output"]');
+            const solarMarker = document.querySelector('a-marker[url*="solar"]');
             const info = document.querySelector('#markerInfo');
             const earthOrbit = document.querySelector('#earthOrbit');
             const moonOrbit = document.querySelector('#moonOrbit');
-            const video = document.querySelector('#outputVideo');
 
-            solarMarker.addEventListener('markerFound', () => {
-                info.textContent = "Solar System Active! 🌎";
-                info.style.backgroundColor = "rgba(0, 255, 0, 0.8)";
-            });
+            // Enable video autoplay
+            video.play();
 
             videoMarker.addEventListener('markerFound', () => {
                 info.textContent = "Video Playing! 🎥";
@@ -96,8 +133,12 @@
                 video.play();
             });
 
+            solarMarker.addEventListener('markerFound', () => {
+                info.textContent = "Solar System Active! 🌎";
+                info.style.backgroundColor = "rgba(0, 255, 0, 0.8)";
+            });
+
             videoMarker.addEventListener('markerLost', () => {
-                video.pause();
                 info.textContent = "Searching for markers...";
                 info.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
             });
