@@ -6,6 +6,57 @@
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script>
+        AFRAME.registerComponent('pinch-zoom', {
+            init: function() {
+                this.camera = this.el;
+                this.initialDistance = 0;
+                this.initialZoom = 1;
+                
+                // Touch event handlers
+                document.addEventListener('touchstart', this.onTouchStart.bind(this));
+                document.addEventListener('touchmove', this.onTouchMove.bind(this));
+                document.addEventListener('touchend', this.onTouchEnd.bind(this));
+            },
+
+            onTouchStart: function(evt) {
+                if (evt.touches.length === 2) {
+                    const touch1 = evt.touches[0];
+                    const touch2 = evt.touches[1];
+                    this.initialDistance = this.getDistance(touch1, touch2);
+                    this.initialZoom = this.camera.object3D.position.z;
+                }
+            },
+
+            onTouchMove: function(evt) {
+                if (evt.touches.length === 2) {
+                    const touch1 = evt.touches[0];
+                    const touch2 = evt.touches[1];
+                    const currentDistance = this.getDistance(touch1, touch2);
+                    const zoomFactor = currentDistance / this.initialDistance;
+                    
+                    // Calculate new zoom level
+                    let newZoom = this.initialZoom - (zoomFactor - 1) * 2;
+                    
+                    // Add constraints to zoom
+                    newZoom = Math.min(Math.max(newZoom, -5), 5);
+                    
+                    // Apply zoom
+                    this.camera.object3D.position.z = newZoom;
+                }
+            },
+
+            onTouchEnd: function() {
+                this.initialDistance = 0;
+            },
+
+            getDistance: function(touch1, touch2) {
+                const dx = touch1.clientX - touch2.clientX;
+                const dy = touch1.clientY - touch2.clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+        });
+    </script>
     <style>
         #markerInfo {
             position: fixed;
@@ -86,7 +137,7 @@
         </a-marker>
         
         <!-- Camera -->
-        <a-entity camera position="0 1.6 0">
+        <a-entity camera position="0 1.6 0" pinch-zoom>
             <a-entity
                 cursor="fuse: false; rayOrigin: mouse;"
                 raycaster="far: 10000; objects: .clickable"
