@@ -2,176 +2,72 @@
 <html>
 <head>
     <title>AR Solar System</title>
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="solar-system.js"></script>
-    <script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
-    <script src="gesture-handler.js"></script>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        .ui-element {
+        #ui-overlay {
             position: fixed;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: system-ui, -apple-system, sans-serif;
-            font-size: 16px;
-            z-index: 1000;
-        }
-        #arInfo {
             top: 20px;
             left: 20px;
-            pointer-events: none;
-        }
-        #loadingProgress {
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        .hidden { display: none; }
-        body { margin: 0; overflow: hidden; }
-        #markerGuide {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 8px;
-            width: 200px;
-            height: 200px;
-            pointer-events: none;
-            display: none;
-        }
-        .marker-found #markerGuide {
-            border-color: #4CAF50;
-        }
-        .marker-stable #markerGuide {
-            border-color: #00ff00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-        }
-        .zoom-controls {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
             z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            pointer-events: none;
         }
-        .zoom-btn {
-            background: rgba(0, 0, 0, 0.7);
+
+        #status, #loading {
+            background: rgba(0,0,0,0.7);
             color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="arInfo" class="ui-element">Initializing AR...</div>
-    <div id="loadingProgress" class="ui-element">Loading assets: 0%</div>
-    <div id="markerGuide"></div>
+    <div id="ui-overlay">
+        <div id="status">Searching for marker...</div>
+        <div id="loading" class="hidden">Loading models...</div>
+    </div>
 
-    <a-scene 
-        embedded 
-        arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960; maxDetectionRate: 60;'
-        vr-mode-ui="enabled: false"
-        renderer="logarithmicDepthBuffer: true; antialias: true;">
-
-        <a-assets timeout="30000">
-            <video id="arVideo" 
-                src="ar/output/output.mp4"
-                preload="auto" 
-                loop 
-                crossorigin="anonymous"
-                playsinline 
-                webkit-playsinline>
-            </video>
-            <a-asset-item id="sunModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Sun/glTF/Sun.gltf"></a-asset-item>
-            <a-asset-item id="earthModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Earth/glTF/Earth.gltf"></a-asset-item>
-            <a-asset-item id="moonModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Moon/glTF/Moon.gltf"></a-asset-item>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+        <a-assets>
+            <!-- Using NASA 3D models -->
+            <a-asset-item id="sun-model" src="https://nasa3d.arc.nasa.gov/shared_assets/models/sun/sun.gltf"></a-asset-item>
+            <a-asset-item id="earth-model" src="https://nasa3d.arc.nasa.gov/shared_assets/models/earth/earth.gltf"></a-asset-item>
+            <a-asset-item id="moon-model" src="https://nasa3d.arc.nasa.gov/shared_assets/models/moon/moon.gltf"></a-asset-item>
         </a-assets>
 
-        <!-- Solar System Marker -->
-        <a-marker 
-            id="solarMarker"
-            preset="custom" 
-            type="pattern" 
-            url="ar/solar/solar.patt"
-            smooth="true"
-            smoothCount="10"
-            smoothTolerance="0.01"
-            smoothThreshold="5"
-            raycaster="objects: .clickable"
-            emitevents="true"
-            cursor="fuse: false; rayOrigin: mouse"
-            better-marker-detection>
-            <a-entity 
-                id="solarSystem" 
-                position="0 0.5 0" 
-                scale="0.15 0.15 0.15"
-                solar-system="timeScale: 1; realScale: false"
-                gesture-handler="minScale: 0.1; maxScale: 20">
+        <a-marker preset="hiro" smooth="true" ar-marker>
+            <a-entity id="solar-system" position="0 0.5 0" scale="0.5 0.5 0.5">
                 <!-- Sun -->
                 <a-entity 
-                    id="sun"
-                    gltf-model="#sunModel"
-                    position="0 0 0" 
-                    scale="7 7 7"
-                    material="shader: standard; 
-                             emissive: #ff5500; 
-                             emissiveIntensity: 1.8;
-                             src: #sunTexture"
-                    animation="property: rotation; 
-                              to: 0 360 0; 
-                              dur: 27000; 
-                              easing: linear; 
-                              loop: true">
-                    <a-light type="point" color="#FDB813" intensity="2.5" distance="120"></a-light>
+                    gltf-model="#sun-model"
+                    position="0 0 0"
+                    scale="0.5 0.5 0.5"
+                    celestial-body="type: sun">
                 </a-entity>
-                
-                <!-- Earth System -->
-                <a-entity id="earthOrbit">
+
+                <!-- Earth Orbit -->
+                <a-entity id="earth-orbit">
                     <a-entity 
-                        id="earth"
-                        gltf-model="#earthModel"
-                        position="12 0 0" 
-                        scale="1.5 1.5 1.5"
-                        animation__rotate="property: rotation; 
-                                         to: 0 360 0; 
-                                         dur: 24000; 
-                                         easing: linear; 
-                                         loop: true"
-                        animation__orbit="property: rotation; 
-                                        to: 0 360 0; 
-                                        dur: 365000; 
-                                        easing: linear; 
-                                        loop: true">
+                        gltf-model="#earth-model"
+                        position="2 0 0"
+                        scale="0.3 0.3 0.3"
+                        celestial-body="type: earth">
                         
-                        <!-- Moon System -->
-                        <a-entity id="moonOrbit">
+                        <!-- Moon Orbit -->
+                        <a-entity id="moon-orbit">
                             <a-entity 
-                                id="moon"
-                                gltf-model="#moonModel"
-                                position="2.5 0 0" 
-                                scale="0.7 0.7 0.7"
-                                animation__rotate="property: rotation; 
-                                                to: 0 360 0; 
-                                                dur: 27000; 
-                                                easing: linear; 
-                                                loop: true"
-                                animation__orbit="property: rotation; 
-                                               to: 0 360 0; 
-                                               dur: 27000; 
-                                               easing: linear; 
-                                               loop: true">
+                                gltf-model="#moon-model"
+                                position="0.5 0 0"
+                                scale="0.15 0.15 0.15"
+                                celestial-body="type: moon">
                             </a-entity>
                         </a-entity>
                     </a-entity>
@@ -179,199 +75,80 @@
             </a-entity>
         </a-marker>
 
-        <!-- Video Marker -->
-        <a-marker better-marker-detection preset="custom" type="pattern" url="ar/output/output.patt">
-            <a-video
-                src="#arVideo"
-                width="3"
-                height="2"
-                position="0 0.1 0"
-                rotation="-90 0 0"
-                material="shader: flat; side: double">
-            </a-video>
-        </a-marker>
-        
         <a-entity camera></a-entity>
     </a-scene>
 
+    <script src="js/marker-handler.js"></script>
+    <script src="js/solar-system.js"></script>
+    <script src="js/animation-manager.js"></script>
     <script>
-        (() => {
-            // Cache DOM elements
-            const elements = {
-                video: document.querySelector('#arVideo'),
-                info: document.querySelector('#arInfo'),
-                progress: document.querySelector('#loadingProgress'),
-                videoMarker: document.querySelector('a-marker[url*="video"]'),
-                solarMarker: document.querySelector('a-marker[url*="solar"]'),
-                earthOrbit: document.querySelector('#earthOrbit'),
-                moonOrbit: document.querySelector('#moonOrbit'),
-                markerGuide: document.querySelector('#markerGuide')
-            };
-
-            // State management
-            const state = {
-                animationFrameId: null,
-                isPlaying: false,
-                assetsLoaded: 0,
-                totalAssets: 1, // just video
-            };
-
-            // Update UI
-            const updateUI = {
-                loading: (progress) => {
-                    elements.progress.textContent = `Loading assets: ${progress}%`;
-                    if (progress >= 100) elements.progress.classList.add('hidden');
-                },
-                status: (text, color = 'rgba(0, 0, 0, 0.8)') => {
-                    elements.info.textContent = text;
-                    elements.info.style.backgroundColor = color;
-                }
-            };
-
-            // Video handling
-            const videoHandler = {
-                setup: () => {
-                    elements.video.addEventListener('loadedmetadata', () => {
-                        state.assetsLoaded++;
-                        updateUI.loading(100 * (state.assetsLoaded / state.totalAssets));
-                        videoHandler.attemptPlay();
-                    });
-
-                    elements.video.addEventListener('error', () => {
-                        updateUI.status('Video loading failed - Please refresh', 'rgba(255, 0, 0, 0.8)');
-                    });
-                },
-                attemptPlay: () => {
-                    elements.video.play()
-                        .then(() => state.isPlaying = true)
-                        .catch(error => {
-                            console.warn('Video autoplay failed:', error);
-                            // Auto-retry after 1 second
-                            setTimeout(() => videoHandler.attemptPlay(), 1000);
-                        });
-                }
-            };
-
-            // Marker handling
-            const markerHandler = {
-                videoFound: () => {
-                    document.body.classList.add('marker-found');
-                    elements.markerGuide.style.display = 'block';
-                    updateUI.status('📹 Video Playing', 'rgba(0, 100, 255, 0.8)');
-                    if (!state.isPlaying) videoHandler.attemptPlay();
-                },
-                videoLost: () => {
-                    document.body.classList.remove('marker-found');
-                    elements.markerGuide.style.display = 'none';
-                    if (state.isPlaying) {
-                        elements.video.pause();
-                        state.isPlaying = false;
-                    }
-                    markerHandler.resetInfo();
-                },
-                solarFound: () => {
-                    document.body.classList.add('marker-found');
-                    elements.markerGuide.style.display = 'block';
-                    updateUI.status('🌎 Solar System Active', 'rgba(0, 200, 100, 0.8)');
-                },
-                solarLost: () => {
-                    document.body.classList.remove('marker-found');
-                    elements.markerGuide.style.display = 'none';
-                    markerHandler.resetInfo();
-                },
-                resetInfo: () => {
-                    if (!elements.videoMarker.object3D.visible && !elements.solarMarker.object3D.visible) {
-                        updateUI.status('Center marker in view...', 'rgba(255, 165, 0, 0.8)');
-                    }
-                },
-                stabilized: () => {
-                    document.body.classList.add('marker-stable');
-                    updateUI.status('Marker Stabilized', 'rgba(0, 255, 0, 0.8)');
-                }
-            };
-
-            // Animation
-            const animate = () => {
-                if (elements.solarMarker.object3D.visible) {
-                    elements.earthOrbit.object3D.rotation.y += 0.005;
-                    elements.moonOrbit.object3D.rotation.y += 0.015;
-                }
-                state.animationFrameId = requestAnimationFrame(animate);
-            };
-
-            // Cleanup
-            const cleanup = () => {
-                if (state.animationFrameId) {
-                    cancelAnimationFrame(state.animationFrameId);
-                    state.animationFrameId = null;
-                }
-                if (elements.video) {
-                    elements.video.pause();
-                    elements.video.removeAttribute('src');
-                    elements.video.load();
-                    state.isPlaying = false;
-                }
-            };
-
-            // Initialize
-            const init = () => {
-                videoHandler.setup();
-                elements.videoMarker.addEventListener('markerFound', markerHandler.videoFound);
-                elements.videoMarker.addEventListener('markerLost', markerHandler.videoLost);
-                elements.solarMarker.addEventListener('markerFound', markerHandler.solarFound);
-                elements.solarMarker.addEventListener('markerLost', markerHandler.solarLost);
-                elements.solarMarker.addEventListener('marker-stabilized', markerHandler.stabilized);
-                animate();
-                window.addEventListener('beforeunload', cleanup);
-                window.addEventListener('error', (e) => {
-                    console.error('AR Error:', e);
-                    cleanup();
-                    updateUI.status('AR Error - Please refresh', 'rgba(255, 0, 0, 0.8)');
-                });
-            };
-
-            // Start when DOM is ready
-            document.addEventListener('DOMContentLoaded', init);
-        })();
-    </script>
-
-    <script>
-        AFRAME.registerComponent('better-marker-detection', {
+        AFRAME.registerComponent('ar-marker', {
             init: function() {
+                const status = document.getElementById('status');
+
                 this.el.addEventListener('markerFound', () => {
-                    this.el.setAttribute('visible', 'true');
-                    this.el.emit('marker-detected');
+                    status.textContent = "Solar System Active! 🌎";
+                    status.style.backgroundColor = "rgba(0,255,0,0.7)";
+                    this.el.emit('marker-active');
                 });
 
                 this.el.addEventListener('markerLost', () => {
-                    this.el.setAttribute('visible', 'false');
+                    status.textContent = "Searching for marker...";
+                    status.style.backgroundColor = "rgba(0,0,0,0.7)";
                     this.el.emit('marker-lost');
                 });
+            }
+        });
 
-                // Add stability check
-                let lastVisible = false;
-                let visibilityCount = 0;
+        AFRAME.registerComponent('celestial-body', {
+            schema: {
+                type: {type: 'string', default: 'planet'}
+            },
+
+            init: function() {
+                this.rotation = 0;
+                this.orbit = 0;
                 
-                this.el.sceneEl.addEventListener('renderstart', () => {
-                    this.tick = AFRAME.utils.throttleTick(() => {
-                        const visible = this.el.object3D.visible;
-                        
-                        if (visible === lastVisible) {
-                            visibilityCount++;
-                        } else {
-                            visibilityCount = 0;
-                        }
+                const speeds = {
+                    sun: 0.1,
+                    earth: 0.5,
+                    moon: 1.0
+                };
+                
+                this.rotationSpeed = speeds[this.data.type] || 0.2;
+                this.startAnimation();
+            },
 
-                        if (visibilityCount > 5) {
-                            if (visible) {
-                                this.el.emit('marker-stabilized');
-                            }
-                        }
-
-                        lastVisible = visible;
-                    }, 16.67);  // 60fps
+            startAnimation: function() {
+                this.el.setAttribute('animation__rotate', {
+                    property: 'rotation',
+                    dur: 24000 / this.rotationSpeed,
+                    easing: 'linear',
+                    loop: true,
+                    to: '0 360 0'
                 });
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const solarSystem = document.querySelector('#solar-system');
+            const earthOrbit = document.querySelector('#earth-orbit');
+            const moonOrbit = document.querySelector('#moon-orbit');
+
+            let animationFrame;
+            const animate = () => {
+                earthOrbit.object3D.rotation.y += 0.005;
+                moonOrbit.object3D.rotation.y += 0.015;
+                animationFrame = requestAnimationFrame(animate);
+            };
+
+            solarSystem.addEventListener('marker-active', () => {
+                animate();
+            });
+
+            solarSystem.addEventListener('marker-lost', () => {
+                cancelAnimationFrame(animationFrame);
+            });
         });
     </script>
 </body>
