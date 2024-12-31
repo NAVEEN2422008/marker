@@ -59,6 +59,9 @@
             }
         });
     </script>
+    <script src="solar-system.js"></script>
+    <script src="marker-detection.js"></script>
+    <script src="gesture-handler.js"></script>
     <style>
         #markerInfo {
             position: fixed;
@@ -99,33 +102,38 @@
         </a-assets>
 
         <!-- Solar System Marker -->
-        <a-marker type="pattern" url="ar/solar/solar.patt" smooth="true" smoothCount="10">
-            <a-entity id="solarSystem" position="0 0.1 0" scale="0.05 0.05 0.05">
+        <a-marker id="solarMarker" 
+            type="pattern" 
+            url="ar/solar/solar.patt" 
+            smooth="true" 
+            smoothCount="10"
+            better-marker-detection>
+            <a-entity id="solarSystem" 
+                position="0 0.1 0" 
+                scale="0.15 0.15 0.15"
+                solar-system>
                 <!-- Sun -->
-                <a-sphere 
+                <a-sphere id="sun"
                     position="0 0 0" 
                     radius="1" 
-                    material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/sun.jpg"
-                    animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
+                    material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/sun.jpg">
                 </a-sphere>
                 
                 <!-- Earth Orbit -->
                 <a-entity id="earthOrbit">
                     <!-- Earth -->
-                    <a-sphere 
+                    <a-sphere id="earth"
                         position="3 0 0" 
                         radius="0.3"
-                        material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/earth_atmos_2048.jpg"
-                        animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
+                        material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/earth_atmos_2048.jpg">
                         
                         <!-- Moon Orbit -->
                         <a-entity id="moonOrbit">
                             <!-- Moon -->
-                            <a-sphere 
+                            <a-sphere id="moon"
                                 position="0.5 0 0" 
                                 radius="0.1"
-                                material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/moon_1024.jpg"
-                                animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
+                                material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/moon_1024.jpg">
                             </a-sphere>
                         </a-entity>
                     </a-sphere>
