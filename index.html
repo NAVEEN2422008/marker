@@ -27,47 +27,88 @@
         .hidden {
             display: none;
         }
+
+        .arjs-loader {
+            position: fixed;
+            z-index: 999;
+            overflow: show;
+            margin: auto;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            width: 50px;
+            height: 50px;
+        }
+        #status {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-family: Arial, sans-serif;
+            z-index: 999;
+        }
     </style>
 </head>
-<body>
-    <div id="ui-overlay">
-        <div id="status">Searching for marker...</div>
-        <div id="loading" class="hidden">Loading models...</div>
-    </div>
+<body style="margin: 0;">
+    <div id="status">Scanning for marker...</div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-scene
+        embedded
+        arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth:1280; sourceHeight:960; displayWidth: 1280; displayHeight: 960;'
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true;"
+        inspector="url: https://cdn.jsdelivr.net/gh/aframevr/aframe-inspector@master/dist/aframe-inspector.min.js">
+        
         <a-assets>
-            <!-- Using NASA 3D models -->
-            <a-asset-item id="sun-model" src="https://nasa3d.arc.nasa.gov/shared_assets/models/sun/sun.gltf"></a-asset-item>
-            <a-asset-item id="earth-model" src="https://nasa3d.arc.nasa.gov/shared_assets/models/earth/earth.gltf"></a-asset-item>
-            <a-asset-item id="moon-model" src="https://nasa3d.arc.nasa.gov/shared_assets/models/moon/moon.gltf"></a-asset-item>
+            <!-- Using reliable hosted models -->
+            <a-asset-item id="sun-model" src="https://cdn.glitch.global/your-project/sun.glb"></a-asset-item>
+            <a-asset-item id="earth-model" src="https://cdn.glitch.global/your-project/earth.glb"></a-asset-item>
+            <a-asset-item id="moon-model" src="https://cdn.glitch.global/your-project/moon.glb"></a-asset-item>
         </a-assets>
 
-        <a-marker preset="hiro" smooth="true" ar-marker>
-            <a-entity id="solar-system" position="0 0.5 0" scale="0.5 0.5 0.5">
+        <a-marker 
+            preset="hiro"
+            smooth="true" 
+            smoothCount="5"
+            smoothTolerance="0.01"
+            smoothThreshold="2"
+            raycaster="objects: .clickable"
+            emitevents="true"
+            cursor="fuse: false; rayOrigin: mouse;">
+
+            <a-entity id="solarSystem" position="0 0.1 0" scale="0.3 0.3 0.3">
                 <!-- Sun -->
                 <a-entity 
+                    id="sun"
                     gltf-model="#sun-model"
                     position="0 0 0"
-                    scale="0.5 0.5 0.5"
-                    celestial-body="type: sun">
+                    scale="0.2 0.2 0.2"
+                    animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
+                    <a-light type="point" color="#FDB813" intensity="2"></a-light>
                 </a-entity>
 
                 <!-- Earth Orbit -->
-                <a-entity id="earth-orbit">
+                <a-entity id="earthOrbit">
                     <a-entity 
+                        id="earth"
                         gltf-model="#earth-model"
-                        position="2 0 0"
-                        scale="0.3 0.3 0.3"
-                        celestial-body="type: earth">
+                        position="1 0 0"
+                        scale="0.1 0.1 0.1"
+                        animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
                         <!-- Moon Orbit -->
-                        <a-entity id="moon-orbit">
+                        <a-entity id="moonOrbit">
                             <a-entity 
+                                id="moon"
                                 gltf-model="#moon-model"
-                                position="0.5 0 0"
-                                scale="0.15 0.15 0.15"
-                                celestial-body="type: moon">
+                                position="0.3 0 0"
+                                scale="0.05 0.05 0.05"
+                                animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
                             </a-entity>
                         </a-entity>
                     </a-entity>
@@ -75,7 +116,7 @@
             </a-entity>
         </a-marker>
 
-        <a-entity camera></a-entity>
+        <a-entity camera position="0 0 0"></a-entity>
     </a-scene>
 
     <script src="js/marker-handler.js"></script>
@@ -150,6 +191,36 @@
                 cancelAnimationFrame(animationFrame);
             });
         });
+
+        AFRAME.registerComponent('orbit-animation', {
+            init: function() {
+                const earthOrbit = document.querySelector('#earthOrbit');
+                const moonOrbit = document.querySelector('#moonOrbit');
+                
+                function animate() {
+                    earthOrbit.object3D.rotation.y += 0.002;
+                    moonOrbit.object3D.rotation.y += 0.004;
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            }
+        });
+
+        const marker = document.querySelector('a-marker');
+        const status = document.getElementById('status');
+
+        marker.addEventListener('markerFound', () => {
+            status.textContent = "Solar System Activated! 🌎";
+            status.style.backgroundColor = "rgba(0, 255, 0, 0.7)";
+        });
+
+        marker.addEventListener('markerLost', () => {
+            status.textContent = "Scanning for marker...";
+            status.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+        });
+
+        // Add orbit animation component to solar system
+        document.querySelector('#solarSystem').setAttribute('orbit-animation', '');
     </script>
 </body>
 </html>
