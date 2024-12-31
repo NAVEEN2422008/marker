@@ -1,6 +1,6 @@
 AFRAME.registerComponent('solar-system', {
     schema: {
-        timeScale: {type: 'number', default: 0.5},
+        timeScale: {type: 'number', default: 1.0},
         realScale: {type: 'boolean', default: false}
     },
 
@@ -18,27 +18,24 @@ AFRAME.registerComponent('solar-system', {
 
         // Adjusted constants for better visibility
         this.constants = {
-            earthYear: 365.25,
-            earthDay: 24,
-            moonMonth: 27.3,
-            sunRotation: 27,
-            earthTilt: 23.5,
-            moonTilt: 5.14,
-            earthDistance: 3, // Reduced for better visibility
-            moonDistance: 0.8,  // Reduced for better visibility
+            earthDistance: 1.5,    
+            moonDistance: 0.4,    
             scales: {
-                sun: [0.5, 0.5, 0.5],
-                earth: [0.2, 0.2, 0.2],
-                moon: [0.1, 0.1, 0.1]
+                sun: 0.5,       
+                earth: 0.2,     
+                moon: 0.08      
             },
-            rotationSpeeds: {
-                earth: 0.01,
-                moon: 0.02,
-                sun: 0.005
+            speeds: {
+                earthRotation: 0.01,    
+                earthOrbit: 0.005,     
+                moonRotation: 0.01,    
+                moonOrbit: 0.02,      
+                sunRotation: 0.001     
             }
         };
 
         this.lastTime = 0;
+        this.isVisible = false;
         this.setupSystem();
     },
 
@@ -129,20 +126,20 @@ AFRAME.registerComponent('solar-system', {
         // Update rotations
         if (this.celestialBodies.earth) {
             this.celestialBodies.earth.object3D.rotation.y += 
-                this.constants.rotationSpeeds.earth * dt;
+                this.constants.speeds.earthRotation * dt;
         }
         if (this.celestialBodies.moon) {
             this.celestialBodies.moon.object3D.rotation.y += 
-                this.constants.rotationSpeeds.moon * dt;
+                this.constants.speeds.moonRotation * dt;
         }
         if (this.celestialBodies.sun) {
             this.celestialBodies.sun.object3D.rotation.y += 
-                this.constants.rotationSpeeds.sun * dt;
+                this.constants.speeds.sunRotation * dt;
         }
 
         // Update orbits
-        this.celestialBodies.earthOrbit.object3D.rotation.y += 0.002 * dt;
-        this.celestialBodies.moonOrbit.object3D.rotation.y += 0.005 * dt;
+        this.celestialBodies.earthOrbit.object3D.rotation.y += this.constants.speeds.earthOrbit * dt;
+        this.celestialBodies.moonOrbit.object3D.rotation.y += this.constants.speeds.moonOrbit * dt;
     },
 
     remove: function() {

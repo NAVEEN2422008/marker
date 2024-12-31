@@ -58,6 +58,125 @@
                 return Math.sqrt(dx * dx + dy * dy);
             }
         });
+
+        AFRAME.registerComponent('solar-system', {
+            schema: {
+                timeScale: {type: 'number', default: 1.0},
+                realScale: {type: 'boolean', default: false}
+            },
+
+            init: function() {
+                this.celestialBodies = {};
+                ['sun', 'earth', 'moon', 'earthOrbit', 'moonOrbit'].forEach(id => {
+                    const element = this.el.querySelector(`#${id}`);
+                    if (element) {
+                        this.celestialBodies[id] = element;
+                    } else {
+                        console.warn(`Missing element: ${id}`);
+                    }
+                });
+
+                // Adjusted values for better AR visualization
+                this.constants = {
+                    earthDistance: 2,    // Distance from sun
+                    moonDistance: 0.5,   // Distance from earth
+                    scales: {
+                        sun: 0.7,       // Sun scale
+                        earth: 0.3,     // Earth scale
+                        moon: 0.1       // Moon scale
+                    },
+                    speeds: {
+                        earthRotation: 0.02,    // Earth self-rotation
+                        earthOrbit: 0.005,      // Earth orbit around sun
+                        moonRotation: 0.02,     // Moon self-rotation
+                        moonOrbit: 0.015,       // Moon orbit around earth
+                        sunRotation: 0.001      // Sun self-rotation
+                    }
+                };
+
+                this.lastTime = 0;
+                this.isVisible = false;
+                this.setupSystem();
+            },
+
+            setupSystem: function() {
+                // Setup sun
+                if (this.celestialBodies.sun) {
+                    this.celestialBodies.sun.setAttribute('material', {
+                        src: 'https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/sun.jpg',
+                        emissive: '#FDB813',
+                        emissiveIntensity: 0.5
+                    });
+                    this.celestialBodies.sun.setAttribute('scale', 
+                        `${this.constants.scales.sun} ${this.constants.scales.sun} ${this.constants.scales.sun}`);
+                }
+
+                // Setup earth
+                if (this.celestialBodies.earth) {
+                    this.celestialBodies.earth.setAttribute('material', {
+                        src: 'https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/earth_atmos_2048.jpg',
+                        normalMap: 'https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/earth_normal_2048.jpg'
+                    });
+                    this.celestialBodies.earth.setAttribute('scale',
+                        `${this.constants.scales.earth} ${this.constants.scales.earth} ${this.constants.scales.earth}`);
+                }
+
+                // Setup moon
+                if (this.celestialBodies.moon) {
+                    this.celestialBodies.moon.setAttribute('material', {
+                        src: 'https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/moon_1024.jpg'
+                    });
+                    this.celestialBodies.moon.setAttribute('scale',
+                        `${this.constants.scales.moon} ${this.constants.scales.moon} ${this.constants.scales.moon}`);
+                }
+
+                // Setup orbits
+                if (this.celestialBodies.earthOrbit) {
+                    this.celestialBodies.earthOrbit.object3D.position.set(0, 0, 0);
+                }
+
+                if (this.celestialBodies.moonOrbit) {
+                    this.celestialBodies.moonOrbit.object3D.position.set(0, 0, 0);
+                }
+
+                // Set initial positions
+                if (this.celestialBodies.earth) {
+                    this.celestialBodies.earth.object3D.position.set(this.constants.earthDistance, 0, 0);
+                }
+
+                if (this.celestialBodies.moon) {
+                    this.celestialBodies.moon.object3D.position.set(this.constants.moonDistance, 0, 0);
+                }
+            },
+
+            tick: function(time, deltaTime) {
+                if (!this.isVisible) return;
+
+                const dt = deltaTime * 0.001 * this.data.timeScale;
+
+                // Rotate celestial bodies
+                if (this.celestialBodies.sun) {
+                    this.celestialBodies.sun.object3D.rotation.y += this.constants.speeds.sunRotation * dt;
+                }
+
+                if (this.celestialBodies.earth) {
+                    this.celestialBodies.earth.object3D.rotation.y += this.constants.speeds.earthRotation * dt;
+                }
+
+                if (this.celestialBodies.moon) {
+                    this.celestialBodies.moon.object3D.rotation.y += this.constants.speeds.moonRotation * dt;
+                }
+
+                // Update orbits
+                if (this.celestialBodies.earthOrbit) {
+                    this.celestialBodies.earthOrbit.object3D.rotation.y += this.constants.speeds.earthOrbit * dt;
+                }
+
+                if (this.celestialBodies.moonOrbit) {
+                    this.celestialBodies.moonOrbit.object3D.rotation.y += this.constants.speeds.moonOrbit * dt;
+                }
+            }
+        });
     </script>
     <script src="solar-system.js"></script>
     <script src="marker-detection.js"></script>
@@ -104,45 +223,73 @@
         <!-- Solar System Marker -->
         <a-marker id="solarMarker" 
             type="pattern" 
-            url="ar/output/output.patt" 
+            url="ar/solar/solar.patt" 
             smooth="true" 
             smoothCount="10"
-            better-marker-detection>
+            raycaster="objects: .clickable"
+            emitevents="true"
+            cursor="fuse: false; rayOrigin: mouse;">
+            
             <a-entity id="solarSystem" 
                 position="0 0.1 0" 
-                scale="0.15 0.15 0.15"
+                scale="0.3 0.3 0.3"
                 solar-system>
+                
                 <!-- Sun -->
                 <a-sphere id="sun"
                     position="0 0 0" 
-                    radius="1" 
-                    material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/sun.jpg">
+                    radius="1"
+                    material="shader: standard; 
+                             src: https://cdn.glitch.com/d5b5b549-5b74-4b56-b972-503d7d8fe3f7%2Fsun.jpg?v=1629340865000;
+                             emissive: #FDB813;
+                             emissiveIntensity: 0.5"
+                    segments-height="53">
                 </a-sphere>
                 
                 <!-- Earth Orbit -->
                 <a-entity id="earthOrbit">
                     <!-- Earth -->
                     <a-sphere id="earth"
-                        position="3 0 0" 
+                        class="clickable"
+                        position="1.5 0 0" 
                         radius="0.3"
-                        material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/earth_atmos_2048.jpg">
+                        material="src: https://cdn.glitch.com/d5b5b549-5b74-4b56-b972-503d7d8fe3f7%2Fearth.jpg?v=1629340865000"
+                        segments-height="53">
                         
-                        <!-- Moon Orbit -->
-                        <a-entity id="moonOrbit">
+                        <!-- Moon Orbit - Fixed position relative to Earth -->
+                        <a-entity id="moonOrbit" position="0 0 0">
                             <!-- Moon -->
                             <a-sphere id="moon"
-                                position="0.5 0 0" 
-                                radius="0.1"
-                                material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/moon_1024.jpg">
+                                class="clickable"
+                                position="0.4 0 0" 
+                                radius="0.08"
+                                material="src: https://cdn.glitch.com/d5b5b549-5b74-4b56-b972-503d7d8fe3f7%2Fmoon.jpg?v=1629340865000"
+                                segments-height="53">
                             </a-sphere>
                         </a-entity>
                     </a-sphere>
                 </a-entity>
             </a-entity>
+
+            <!-- Add scale controls -->
+            <a-entity id="scaleControls" position="0 -0.5 0">
+                <a-box class="clickable" 
+                       position="-0.2 0 0" 
+                       scale="0.1 0.1 0.1" 
+                       color="red"
+                       onclick="decreaseScale()">
+                </a-box>
+                <a-box class="clickable" 
+                       position="0.2 0 0" 
+                       scale="0.1 0.1 0.1" 
+                       color="green"
+                       onclick="increaseScale()">
+                </a-box>
+            </a-entity>
         </a-marker>
 
         <!-- Video Marker -->
-        <a-marker type="pattern" url="ar/solar/solar.patt" smooth="true" smoothCount="10">
+        <a-marker type="pattern" url="ar/output/output.patt" smooth="true" smoothCount="10">
             <a-video
                 src="#outputVideo"
                 width="3"
@@ -215,6 +362,26 @@
             }
             animate();
         };
+
+        function increaseScale() {
+            const solarSystem = document.querySelector('#solarSystem');
+            const currentScale = solarSystem.getAttribute('scale');
+            solarSystem.setAttribute('scale', {
+                x: currentScale.x * 1.2,
+                y: currentScale.y * 1.2,
+                z: currentScale.z * 1.2
+            });
+        }
+
+        function decreaseScale() {
+            const solarSystem = document.querySelector('#solarSystem');
+            const currentScale = solarSystem.getAttribute('scale');
+            solarSystem.setAttribute('scale', {
+                x: currentScale.x * 0.8,
+                y: currentScale.y * 0.8,
+                z: currentScale.z * 0.8
+            });
+        }
     </script>
 </body>
 </html>
