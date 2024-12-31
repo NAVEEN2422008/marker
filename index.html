@@ -1,233 +1,212 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AR Solar System Explorer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <title>AR Solar System & Video</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script>
+        AFRAME.registerComponent('pinch-zoom', {
+            init: function() {
+                this.camera = this.el;
+                this.initialDistance = 0;
+                this.initialZoom = 0;
+                this.minZoom = -2;  // Closer zoom limit
+                this.maxZoom = 2;   // Further zoom limit
+                
+                // Touch event handlers
+                document.addEventListener('touchstart', this.onTouchStart.bind(this));
+                document.addEventListener('touchmove', this.onTouchMove.bind(this));
+                document.addEventListener('touchend', this.onTouchEnd.bind(this));
+            },
+
+            onTouchStart: function(evt) {
+                if (evt.touches.length === 2) {
+                    const touch1 = evt.touches[0];
+                    const touch2 = evt.touches[1];
+                    this.initialDistance = this.getDistance(touch1, touch2);
+                    this.initialZoom = this.camera.object3D.position.z;
+                }
+            },
+
+            onTouchMove: function(evt) {
+                if (evt.touches.length === 2) {
+                    const touch1 = evt.touches[0];
+                    const touch2 = evt.touches[1];
+                    const currentDistance = this.getDistance(touch1, touch2);
+                    const zoomFactor = currentDistance / this.initialDistance;
+                    
+                    // Calculate new zoom level
+                    let newZoom = this.initialZoom - (zoomFactor - 1);
+                    
+                    // Add constraints to zoom
+                    newZoom = Math.min(Math.max(newZoom, this.minZoom), this.maxZoom);
+                    
+                    // Apply zoom
+                    this.camera.object3D.position.z = newZoom;
+                }
+            },
+
+            onTouchEnd: function() {
+                this.initialDistance = 0;
+            },
+
+            getDistance: function(touch1, touch2) {
+                const dx = touch1.clientX - touch2.clientX;
+                const dy = touch1.clientY - touch2.clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+        });
+    </script>
     <style>
-        #ui-container {
+        #markerInfo {
             position: fixed;
-            width: 100%;
-            z-index: 1000;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        #status {
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 30px;
-            margin-top: 20px;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            font-size: 16px;
-        }
-
-        #controls {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            pointer-events: auto;
-        }
-
-        .control-btn {
-            background: rgba(255,255,255,0.9);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .control-btn:hover {
-            background: rgba(255,255,255,1);
-            transform: translateY(-2px);
-        }
-
-        .info-panel {
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 15px;
-            border-radius: 10px;
-            font-size: 14px;
-            max-width: 200px;
-            backdrop-filter: blur(5px);
-            display: none;
+            border-radius: 8px;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
         }
-
-        .planet-label {
-            position: absolute;
-            background: rgba(255,255,255,0.9);
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            pointer-events: none;
-            display: none;
+        body { 
+            margin: 0; 
+            overflow: hidden;
         }
     </style>
 </head>
-<body style="margin: 0;">
-    <div id="ui-container">
-        <div id="status">Initializing AR Experience...</div>
-        <div id="info-panel" class="info-panel"></div>
-    </div>
-
-    <div id="controls">
-        <button class="control-btn" id="reset">🔄 Reset</button>
-        <button class="control-btn" id="toggle-rotation">⏯️ Pause/Play</button>
-        <button class="control-btn" id="zoom-in">🔍+</button>
-        <button class="control-btn" id="zoom-out">🔍-</button>
-    </div>
-
-    <a-scene
-        embedded
-        arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth:1080; sourceHeight:1920; displayWidth: 1080; displayHeight: 1920;'
+<body>
+    <div id="markerInfo">Searching for markers...</div>
+    <a-scene 
+        embedded 
+        arjs='sourceType: webcam; 
+              debugUIEnabled: false; 
+              detectionMode: mono_and_matrix; 
+              matrixCodeType: 3x3; 
+              sourceWidth: 1280;
+              sourceHeight: 960;
+              displayWidth: 1280;
+              displayHeight: 960;
+              trackingMethod: best;'
         vr-mode-ui="enabled: false"
-        renderer="logarithmicDepthBuffer: true; antialias: true;">
+        renderer="logarithmicDepthBuffer: true; precision: medium;">
         
         <a-assets>
-            <a-asset-item id="sun-model" src="https://cdn.glitch.global/your-project/sun.glb"></a-asset-item>
-            <a-asset-item id="earth-model" src="https://cdn.glitch.global/your-project/earth.glb"></a-asset-item>
-            <a-asset-item id="moon-model" src="https://cdn.glitch.global/your-project/moon.glb"></a-asset-item>
+            <video id="outputVideo" src="ar/output/output.mp4" preload="auto" loop crossorigin playsinline></video>
         </a-assets>
 
-        <a-marker 
-            preset="hiro"
-            smooth="true" 
-            smoothCount="10"
-            smoothTolerance="0.005"
-            smoothThreshold="2"
-            raycaster="objects: .clickable"
-            emitevents="true"
-            cursor="fuse: false; rayOrigin: mouse;">
-
-            <a-entity id="solarSystem" position="0 0.1 0" scale="0.2 0.2 0.2">
+        <!-- Solar System Marker -->
+        <a-marker type="pattern" url="ar/solar/solar.patt" smooth="true" smoothCount="10">
+            <a-entity id="solarSystem" position="0 0.1 0" scale="0.05 0.05 0.05">
                 <!-- Sun -->
-                <a-entity 
-                    id="sun"
-                    class="clickable"
-                    gltf-model="#sun-model"
-                    position="0 0 0"
-                    scale="0.2 0.2 0.2"
-                    celestial-body="type: sun"
+                <a-sphere 
+                    position="0 0 0" 
+                    radius="1" 
+                    material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/sun.jpg"
                     animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
-                    <a-light type="point" color="#FDB813" intensity="2"></a-light>
-                </a-entity>
-
+                </a-sphere>
+                
                 <!-- Earth Orbit -->
-                <a-entity id="earthOrbit" animation="property: rotation; to: 0 360 0; dur: 30000; easing: linear; loop: true">
-                    <a-entity 
-                        id="earth"
-                        class="clickable"
-                        gltf-model="#earth-model"
-                        position="1 0 0"
-                        scale="0.1 0.1 0.1"
-                        celestial-body="type: earth">
+                <a-entity id="earthOrbit">
+                    <!-- Earth -->
+                    <a-sphere 
+                        position="3 0 0" 
+                        radius="0.3"
+                        material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/earth_atmos_2048.jpg"
+                        animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
                         
                         <!-- Moon Orbit -->
-                        <a-entity id="moonOrbit" animation="property: rotation; to: 0 360 0; dur: 7000; easing: linear; loop: true">
-                            <a-entity 
-                                id="moon"
-                                class="clickable"
-                                gltf-model="#moon-model"
-                                position="0.3 0 0"
-                                scale="0.05 0.05 0.05"
-                                celestial-body="type: moon">
-                            </a-entity>
+                        <a-entity id="moonOrbit">
+                            <!-- Moon -->
+                            <a-sphere 
+                                position="0.5 0 0" 
+                                radius="0.1"
+                                material="src: https://raw.githubusercontent.com/aframevr/sample-assets/master/assets/images/space/moon_1024.jpg"
+                                animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
+                            </a-sphere>
                         </a-entity>
-                    </a-entity>
+                    </a-sphere>
                 </a-entity>
             </a-entity>
         </a-marker>
 
-        <a-entity camera></a-entity>
+        <!-- Video Marker -->
+        <a-marker type="pattern" url="ar/output/output.patt" smooth="true" smoothCount="10">
+            <a-video
+                src="#outputVideo"
+                width="3"
+                height="2"
+                position="0 0.1 0"
+                rotation="-90 0 0"
+                material="shader: flat; side: double">
+            </a-video>
+        </a-marker>
+        
+        <!-- Camera -->
+        <a-entity camera position="0 1.6 0" look-controls="enabled: false">
+            <a-entity
+                id="cursorRing"
+                cursor="fuse: false; rayOrigin: mouse;"
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                material="color: white; shader: flat"
+                visible="true">
+            </a-entity>
+        </a-entity>
     </a-scene>
 
     <script>
-        AFRAME.registerComponent('celestial-body', {
-            schema: {
-                type: { type: 'string', default: 'planet' }
-            },
+        window.onload = function() {
+            const video = document.querySelector('#outputVideo');
+            const videoMarker = document.querySelector('a-marker[url*="output"]');
+            const solarMarker = document.querySelector('a-marker[url*="solar"]');
+            const info = document.querySelector('#markerInfo');
+            const earthOrbit = document.querySelector('#earthOrbit');
+            const moonOrbit = document.querySelector('#moonOrbit');
+            const cursorRing = document.querySelector('#cursorRing');
 
-            init: function() {
-                this.el.addEventListener('click', () => {
-                    const infoPanel = document.getElementById('info-panel');
-                    const bodyType = this.data.type;
-                    const info = {
-                        sun: "The Sun: Our star, 1.989 × 10^30 kg mass",
-                        earth: "Earth: 3rd planet, 365.25 days orbit",
-                        moon: "Moon: Earth's satellite, 27.3 days orbit"
-                    };
-                    infoPanel.textContent = info[bodyType];
-                    infoPanel.style.display = 'block';
-                    setTimeout(() => {
-                        infoPanel.style.display = 'none';
-                    }, 3000);
-                });
-            }
-        });
-
-        // Enhanced marker handling
-        const marker = document.querySelector('a-marker');
-        const status = document.getElementById('status');
-        let currentScale = 0.2;
-
-        marker.addEventListener('markerFound', () => {
-            status.textContent = "✨ Solar System Active";
-            status.style.backgroundColor = "rgba(40, 167, 69, 0.9)";
-        });
-
-        marker.addEventListener('markerLost', () => {
-            status.textContent = "🔍 Searching for marker...";
-            status.style.backgroundColor = "rgba(0,0,0,0.8)";
-        });
-
-        // Controls functionality
-        document.getElementById('reset').addEventListener('click', () => {
-            const solarSystem = document.querySelector('#solarSystem');
-            solarSystem.object3D.rotation.set(0, 0, 0);
-            currentScale = 0.2;
-            solarSystem.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
-        });
-
-        document.getElementById('zoom-in').addEventListener('click', () => {
-            const solarSystem = document.querySelector('#solarSystem');
-            currentScale += 0.05;
-            solarSystem.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
-        });
-
-        document.getElementById('zoom-out').addEventListener('click', () => {
-            const solarSystem = document.querySelector('#solarSystem');
-            currentScale = Math.max(0.1, currentScale - 0.05);
-            solarSystem.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
-        });
-
-        let isPlaying = true;
-        document.getElementById('toggle-rotation').addEventListener('click', () => {
-            const animations = document.querySelectorAll('[animation]');
-            animations.forEach(el => {
-                if (isPlaying) {
-                    el.pause();
-                } else {
-                    el.play();
-                }
+            // Ensure video autoplay
+            video.play().catch(function(error) {
+                console.log("Video autoplay failed:", error);
             });
-            isPlaying = !isPlaying;
-        });
+
+            videoMarker.addEventListener('markerFound', () => {
+                info.textContent = "Video Playing! 🎥";
+                info.style.backgroundColor = "rgba(0, 0, 255, 0.8)";
+                video.play();
+                cursorRing.setAttribute('visible', 'false');
+            });
+
+            solarMarker.addEventListener('markerFound', () => {
+                info.textContent = "Solar System Active! 🌎";
+                info.style.backgroundColor = "rgba(0, 255, 0, 0.8)";
+                cursorRing.setAttribute('visible', 'false');
+            });
+
+            videoMarker.addEventListener('markerLost', () => {
+                info.textContent = "Searching for markers...";
+                info.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+                cursorRing.setAttribute('visible', 'true');
+            });
+
+            solarMarker.addEventListener('markerLost', () => {
+                info.textContent = "Searching for markers...";
+                info.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+                cursorRing.setAttribute('visible', 'true');
+            });
+
+            function animate() {
+                if (earthOrbit && moonOrbit) {
+                    earthOrbit.object3D.rotation.y += 0.005;
+                    moonOrbit.object3D.rotation.y += 0.015;
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        };
     </script>
 </body>
 </html>
