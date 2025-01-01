@@ -200,93 +200,43 @@
 </head>
 <body>
     <div id="markerInfo">Searching for markers...</div>
-    <a-scene 
-        embedded 
-        arjs='sourceType: webcam; 
-              debugUIEnabled: false; 
-              detectionMode: mono_and_matrix; 
-              matrixCodeType: 3x3; 
-              sourceWidth: 1280;
-              sourceHeight: 960;
-              displayWidth: 1280;
-              displayHeight: 960;
-              trackingMethod: best;'
-        vr-mode-ui="enabled: false"
-        renderer="logarithmicDepthBuffer: true; precision: medium;">
-        
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="logarithmicDepthBuffer: true;">
         <a-assets>
+            <img id="sunTexture" src="https://threejs.org/examples/textures/planets/sun.jpg">
+            <img id="earthTexture" src="https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg">
+            <img id="moonTexture" src="https://threejs.org/examples/textures/planets/moon_1024.jpg">
             <video id="outputVideo" src="ar/output/output.mp4" preload="auto" loop crossorigin playsinline></video>
         </a-assets>
 
-        <!-- Update Solar System Marker section -->
         <a-marker id="solarMarker" type="pattern" url="ar/solar/solar.patt" smooth="true" smoothCount="10">
-            <a-entity id="solarSystem" position="0 3 0" scale="0.5 0.5 0.5" solar-system>
+            <a-entity id="solarSystem" position="0 8 0" scale="0.4 0.4 0.4" solar-system>
                 <!-- Sun -->
-                <a-sphere id="sun" position="0 0 0" radius="0.8" segments-height="64"
-                    material="shader: standard; 
-                             src: https://images.unsplash.com/photo-1614642264762-d0a3b8bf3700?q=80;
-                             emissive: #FDB813;
-                             emissiveIntensity: 1.2;
-                             metalness: 0.3;
-                             roughness: 0.7">
+                <a-sphere id="sun" position="0 0 0" radius="1" segments-height="32"
+                    material="src: #sunTexture; emissive: #FDB813; emissiveIntensity: 1">
                 </a-sphere>
                 
                 <!-- Earth Orbit System -->
-                <a-entity id="earthOrbit" position="0 0 0">
-                    <a-torus id="earthPath" 
-                        radius="2" 
-                        radius-tubular="0.01" 
-                        segments-tubular="48" 
-                        rotation="90 0 0" 
-                        material="color: #666; opacity: 0.3">
-                    </a-torus>
-                    
-                    <!-- Earth with Moon System -->
-                    <a-sphere id="earth" 
-                        position="2 0 0" 
-                        radius="0.4" 
-                        rotation="23.5 0 0"
-                        material="src: https://cdn.rawgit.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg;
-                                 normalMap: https://cdn.rawgit.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg;
-                                 roughness: 0.8;
-                                 metalness: 0.2">
+                <a-entity id="earthOrbit">
+                    <!-- Earth -->
+                    <a-sphere id="earth" position="3 0 0" radius="0.4" rotation="23.5 0 0"
+                        material="src: #earthTexture">
+                        <!-- Moon Orbit System -->
+                        <a-entity id="moonOrbit">
+                            <a-sphere id="moon" position="0.8 0 0" radius="0.15"
+                                material="src: #moonTexture">
+                            </a-sphere>
+                        </a-entity>
                     </a-sphere>
-
-                    <!-- Separate Moon Orbit -->
-                    <a-entity id="moonOrbit" position="2 0 0">
-                        <a-sphere id="moon" 
-                            position="0.8 0 0" 
-                            radius="0.15" 
-                            material="src: https://cdn.rawgit.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg;
-                                     roughness: 0.9;
-                                     metalness: 0.1">
-                        </a-sphere>
-                    </a-entity>
                 </a-entity>
             </a-entity>
         </a-marker>
 
-        <!-- Update Video Marker position -->
-        <a-marker type="pattern" url="ar/output/output.patt" smooth="true" smoothCount="10">
-            <a-video src="#outputVideo"
-                     width="2" height="1.5"
-                     position="-5 0 0"
-                     rotation="-90 0 0"
-                     material="shader: flat; side: double">
-            </a-video>
+        <!-- Video Marker -->
+        <a-marker type="pattern" url="ar/output/output.patt">
+            <a-video src="#outputVideo" width="2" height="1.5" position="0 8 0" rotation="-90 0 0"></a-video>
         </a-marker>
-        
-        <!-- Camera -->
-        <a-entity camera position="0 1.6 0" look-controls="enabled: false">
-            <a-entity
-                id="cursorRing"
-                cursor="fuse: false; rayOrigin: mouse;"
-                position="0 0 -1"
-                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-                material="color: white; shader: flat"
-                visible="true">
-            </a-entity>
-        </a-entity>
+
+        <a-entity camera></a-entity>
     </a-scene>
 
     <script>
