@@ -1,153 +1,153 @@
 AFRAME.registerComponent('solar-system', {
     schema: {
-        timeScale: {type: 'number', default: 1.0},
-        realScale: {type: 'boolean', default: false}
+        timeScale: {type: 'number', default: 1.0}
     },
 
     init: function() {
-        // Cache elements with error handling
+        this.setupConstants();
+        this.setupElements();
+        this.createOrbits();
+        this.setupEventListeners();
+    },
+
+    setupElements: function() {
         this.celestialBodies = {};
         ['sun', 'earth', 'moon', 'earthOrbit', 'moonOrbit'].forEach(id => {
             const element = this.el.querySelector(`#${id}`);
             if (element) {
                 this.celestialBodies[id] = element;
-            } else {
-                console.warn(`Missing element: ${id}`);
             }
         });
+    },
 
-        // Adjusted constants for better visibility
+    setupConstants: function() {
         this.constants = {
-            earthDistance: 1.5,    
-            moonDistance: 0.4,    
+            earthDistance: 2,
+            moonDistance: 0.8,
             scales: {
-                sun: 0.5,       
-                earth: 0.2,     
-                moon: 0.08      
+                sun: 0.8,
+                earth: 0.4,
+                moon: 0.15
             },
             speeds: {
-                earthRotation: 0.01,    
-                earthOrbit: 0.005,     
-                moonRotation: 0.01,    
-                moonOrbit: 0.02,      
-                sunRotation: 0.001     
+                earthRotation: 0.01,
+                earthOrbit: 0.005,
+                moonRotation: 0.01,
+                moonOrbit: 0.02,
+                sunRotation: 0.001
             }
         };
-
-        this.lastTime = 0;
         this.isVisible = false;
-        this.setupSystem();
+    },
+
+    createOrbits: function() {
+        // Create Earth's orbital path
+        const earthPath = document.createElement('a-torus');
+        earthPath.setAttribute('id', 'earthPath');
+        earthPath.setAttribute('radius', this.constants.earthDistance);
+        earthPath.setAttribute('radius-tubular', '0.02');
+        earthPath.setAttribute('segments-tubular', '50');
+        earthPath.setAttribute('rotation', '90 0 0');
+        earthPath.setAttribute('material', 'color: #666; opacity: 0.5');
+        this.el.appendChild(earthPath);
+        
+        // Create Moon's orbital path
+        const moonPath = document.createElement('a-torus');
+        moonPath.setAttribute('id', 'moonPath');
+        moonPath.setAttribute('radius', this.constants.moonDistance);
+        moonPath.setAttribute('radius-tubular', '0.01');
+        moonPath.setAttribute('segments-tubular', '30');
+        moonPath.setAttribute('rotation', '90 0 0');
+        moonPath.setAttribute('material', 'color: #444; opacity: 0.3');
+        this.celestialBodies.earthOrbit.appendChild(moonPath);
     },
 
     setupSystem: function() {
-        if (Object.keys(this.celestialBodies).length === 0) return;
+        // Sun setup
+        if (this.celestialBodies.sun) {
+            this.celestialBodies.sun.setAttribute('material', {
+                src: 'https://cdn.glitch.global/your-assets/sun.jpg',
+                emissive: '#FDB813',
+                emissiveIntensity: 0.7,
+                roughness: 1,
+                metalness: 0
+            });
+            this.setScale('sun');
+        }
 
-        this.setupBodies();
-        this.setupOrbits();
-        this.setupLighting();
-        this.setupEventListeners();
-    },
-
-    setupBodies: function() {
-        // Set scales and positions with error handling
-        Object.entries(this.celestialBodies).forEach(([body, element]) => {
-            if (this.constants.scales[body]) {
-                element.object3D.scale.set(...this.constants.scales[body]);
-            }
-        });
-
+        // Earth setup
         if (this.celestialBodies.earth) {
+            this.celestialBodies.earth.setAttribute('material', {
+                src: 'https://cdn.glitch.global/your-assets/earth.jpg',
+                normalMap: 'https://cdn.glitch.global/your-assets/earth_normal.jpg',
+                roughnessMap: 'https://cdn.glitch.global/your-assets/earth_rough.jpg',
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            this.setScale('earth');
             this.celestialBodies.earth.object3D.position.set(this.constants.earthDistance, 0, 0);
         }
-        
+
+        // Moon setup
         if (this.celestialBodies.moon) {
+            this.celestialBodies.moon.setAttribute('material', {
+                src: 'https://cdn.glitch.global/your-assets/moon.jpg',
+                normalMap: 'https://cdn.glitch.global/your-assets/moon_normal.jpg',
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            this.setScale('moon');
             this.celestialBodies.moon.object3D.position.set(this.constants.moonDistance, 0, 0);
         }
     },
 
-    setupOrbits: function() {
-        if (this.celestialBodies.earthOrbit) {
-            this.celestialBodies.earthOrbit.object3D.rotation.x = 
-                THREE.MathUtils.degToRad(this.constants.earthTilt);
+    setScale: function(bodyName) {
+        const scale = this.constants.scales[bodyName];
+        if (this.celestialBodies[bodyName] && scale) {
+            this.celestialBodies[bodyName].object3D.scale.set(scale, scale, scale);
         }
-        if (this.celestialBodies.moonOrbit) {
-            this.celestialBodies.moonOrbit.object3D.rotation.x = 
-                THREE.MathUtils.degToRad(this.constants.moonTilt);
-        }
-    },
-
-    setupLighting: function() {
-        if (!this.celestialBodies.sun) return;
-        
-        const sunLight = new THREE.PointLight(0xFDB813, 2, 100);
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-        
-        this.celestialBodies.sun.object3D.add(sunLight);
-        this.el.sceneEl.object3D.add(ambientLight);
     },
 
     setupEventListeners: function() {
-        const marker = document.querySelector('a-marker');
-        
-        marker.addEventListener('markerFound', () => {
-            this.el.emit('solar-system-visible', {});
-            this.resumeAnimations();
-        });
-
-        marker.addEventListener('markerLost', () => {
-            this.el.emit('solar-system-hidden', {});
-            this.pauseAnimations();
-        });
-    },
-
-    resumeAnimations: function() {
-        Object.values(this.celestialBodies).forEach(body => {
-            if (body.getAttribute('animation__rotate')) {
-                body.components.animation__rotate.play();
-            }
-        });
-    },
-
-    pauseAnimations: function() {
-        Object.values(this.celestialBodies).forEach(body => {
-            if (body.getAttribute('animation__rotate')) {
-                body.components.animation__rotate.pause();
-            }
-        });
+        const marker = document.querySelector('#solarMarker');
+        if (marker) {
+            marker.addEventListener('markerFound', () => {
+                this.isVisible = true;
+                this.el.emit('solar-system-visible');
+            });
+            
+            marker.addEventListener('markerLost', () => {
+                this.isVisible = false;
+                this.el.emit('solar-system-hidden');
+            });
+        }
     },
 
     tick: function(time, deltaTime) {
-        if (!this.celestialBodies.earthOrbit || !this.celestialBodies.moonOrbit) return;
-        if (!this.celestialBodies.earthOrbit.object3D.visible) return;
+        if (!this.isVisible) return;
 
-        const dt = (time - this.lastTime) * 0.001 * this.data.timeScale;
-        this.lastTime = time;
+        const dt = deltaTime * 0.001 * this.data.timeScale;
 
-        // Update rotations
+        // Rotate sun
+        if (this.celestialBodies.sun) {
+            this.celestialBodies.sun.object3D.rotation.y += this.constants.speeds.sunRotation * dt;
+        }
+
+        // Rotate and orbit Earth
+        if (this.celestialBodies.earthOrbit) {
+            this.celestialBodies.earthOrbit.object3D.rotation.y += this.constants.speeds.earthOrbit * dt;
+        }
         if (this.celestialBodies.earth) {
-            this.celestialBodies.earth.object3D.rotation.y += 
-                this.constants.speeds.earthRotation * dt;
+            this.celestialBodies.earth.object3D.rotation.y += this.constants.speeds.earthRotation * dt;
+        }
+
+        // Rotate and orbit Moon
+        if (this.celestialBodies.moonOrbit) {
+            this.celestialBodies.moonOrbit.object3D.rotation.y += this.constants.speeds.moonOrbit * dt;
         }
         if (this.celestialBodies.moon) {
-            this.celestialBodies.moon.object3D.rotation.y += 
-                this.constants.speeds.moonRotation * dt;
+            this.celestialBodies.moon.object3D.rotation.y += this.constants.speeds.moonRotation * dt;
         }
-        if (this.celestialBodies.sun) {
-            this.celestialBodies.sun.object3D.rotation.y += 
-                this.constants.speeds.sunRotation * dt;
-        }
-
-        // Update orbits
-        this.celestialBodies.earthOrbit.object3D.rotation.y += this.constants.speeds.earthOrbit * dt;
-        this.celestialBodies.moonOrbit.object3D.rotation.y += this.constants.speeds.moonOrbit * dt;
-    },
-
-    remove: function() {
-        Object.values(this.celestialBodies).forEach(body => {
-            if (body && body.parentNode) {
-                body.parentNode.removeChild(body);
-            }
-        });
     }
 });
 

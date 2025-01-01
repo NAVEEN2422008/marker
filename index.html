@@ -220,83 +220,61 @@
             <video id="outputVideo" src="ar/output/output.mp4" preload="auto" loop crossorigin playsinline></video>
         </a-assets>
 
-        <!-- Solar System Marker -->
-        <a-marker id="solarMarker" 
-            type="pattern" 
-            url="ar/solar/solar.patt" 
-            smooth="true" 
-            smoothCount="10"
-            raycaster="objects: .clickable"
-            emitevents="true"
-            cursor="fuse: false; rayOrigin: mouse;">
-            
-            <a-entity id="solarSystem" 
-                position="0 0.1 0" 
-                scale="0.3 0.3 0.3"
-                solar-system>
-                
+        <!-- Update Solar System Marker section -->
+        <a-marker id="solarMarker" type="pattern" url="ar/solar/solar.patt" smooth="true" smoothCount="10">
+            <a-entity id="solarSystem" position="0 3 0" scale="0.5 0.5 0.5" solar-system>
                 <!-- Sun -->
-                <a-sphere id="sun"
-                    position="0 0 0" 
-                    radius="1"
+                <a-sphere id="sun" position="0 0 0" radius="0.8" segments-height="64"
                     material="shader: standard; 
-                             src: https://cdn.glitch.com/d5b5b549-5b74-4b56-b972-503d7d8fe3f7%2Fsun.jpg?v=1629340865000;
+                             src: https://images.unsplash.com/photo-1614642264762-d0a3b8bf3700?q=80;
                              emissive: #FDB813;
-                             emissiveIntensity: 0.5"
-                    segments-height="53">
+                             emissiveIntensity: 1.2;
+                             metalness: 0.3;
+                             roughness: 0.7">
                 </a-sphere>
                 
-                <!-- Earth Orbit -->
-                <a-entity id="earthOrbit">
-                    <!-- Earth -->
-                    <a-sphere id="earth"
-                        class="clickable"
-                        position="1.5 0 0" 
-                        radius="0.3"
-                        material="src: https://cdn.glitch.com/d5b5b549-5b74-4b56-b972-503d7d8fe3f7%2Fearth.jpg?v=1629340865000"
-                        segments-height="53">
-                        
-                        <!-- Moon Orbit - Fixed position relative to Earth -->
-                        <a-entity id="moonOrbit" position="0 0 0">
-                            <!-- Moon -->
-                            <a-sphere id="moon"
-                                class="clickable"
-                                position="0.4 0 0" 
-                                radius="0.08"
-                                material="src: https://cdn.glitch.com/d5b5b549-5b74-4b56-b972-503d7d8fe3f7%2Fmoon.jpg?v=1629340865000"
-                                segments-height="53">
-                            </a-sphere>
-                        </a-entity>
+                <!-- Earth Orbit System -->
+                <a-entity id="earthOrbit" position="0 0 0">
+                    <a-torus id="earthPath" 
+                        radius="2" 
+                        radius-tubular="0.01" 
+                        segments-tubular="48" 
+                        rotation="90 0 0" 
+                        material="color: #666; opacity: 0.3">
+                    </a-torus>
+                    
+                    <!-- Earth with Moon System -->
+                    <a-sphere id="earth" 
+                        position="2 0 0" 
+                        radius="0.4" 
+                        rotation="23.5 0 0"
+                        material="src: https://cdn.rawgit.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg;
+                                 normalMap: https://cdn.rawgit.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg;
+                                 roughness: 0.8;
+                                 metalness: 0.2">
                     </a-sphere>
-                </a-entity>
-            </a-entity>
 
-            <!-- Add scale controls -->
-            <a-entity id="scaleControls" position="0 -0.5 0">
-                <a-box class="clickable" 
-                       position="-0.2 0 0" 
-                       scale="0.1 0.1 0.1" 
-                       color="red"
-                       onclick="decreaseScale()">
-                </a-box>
-                <a-box class="clickable" 
-                       position="0.2 0 0" 
-                       scale="0.1 0.1 0.1" 
-                       color="green"
-                       onclick="increaseScale()">
-                </a-box>
+                    <!-- Separate Moon Orbit -->
+                    <a-entity id="moonOrbit" position="2 0 0">
+                        <a-sphere id="moon" 
+                            position="0.8 0 0" 
+                            radius="0.15" 
+                            material="src: https://cdn.rawgit.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg;
+                                     roughness: 0.9;
+                                     metalness: 0.1">
+                        </a-sphere>
+                    </a-entity>
+                </a-entity>
             </a-entity>
         </a-marker>
 
-        <!-- Video Marker -->
+        <!-- Update Video Marker position -->
         <a-marker type="pattern" url="ar/output/output.patt" smooth="true" smoothCount="10">
-            <a-video
-                src="#outputVideo"
-                width="3"
-                height="2"
-                position="0 0.1 0"
-                rotation="-90 0 0"
-                material="shader: flat; side: double">
+            <a-video src="#outputVideo"
+                     width="2" height="1.5"
+                     position="0 0 0"
+                     rotation="-90 0 0"
+                     material="shader: flat; side: double">
             </a-video>
         </a-marker>
         
