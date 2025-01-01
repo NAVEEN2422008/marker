@@ -81,9 +81,9 @@
                     earthDistance: 2,    // Distance from sun
                     moonDistance: 0.5,   // Distance from earth
                     scales: {
-                        sun: 0.7,       // Sun scale
-                        earth: 0.3,     // Earth scale
-                        moon: 0.1       // Moon scale
+                        sun: 0.10,       // Sun scale
+                        earth: 0.7,     // Earth scale
+                        moon: 0.5       // Moon scale
                     },
                     speeds: {
                         earthRotation: 0.02,    // Earth self-rotation
@@ -179,8 +179,6 @@
         });
     </script>
     <script src="solar-system.js"></script>
-    <script src="marker-detection.js"></script>
-    <script src="gesture-handler.js"></script>
     <style>
         #markerInfo {
             position: fixed;
@@ -272,7 +270,7 @@
         <a-marker type="pattern" url="ar/output/output.patt" smooth="true" smoothCount="10">
             <a-video src="#outputVideo"
                      width="2" height="1.5"
-                     position="0 0 0"
+                     position="-5 0 0"
                      rotation="-90 0 0"
                      material="shader: flat; side: double">
             </a-video>
